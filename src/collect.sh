@@ -3,6 +3,8 @@
 
 DOWNLOAD_DIR="$(mktemp -d)"
 ISO_MOUNTPOINT="$1"
+DEFAULT_WIM="$2"
+
 
 cp_tree() {
   prefix="$1"
@@ -10,298 +12,353 @@ cp_tree() {
   to="$3"
   resulting_path="$(echo "$to/$(dirname "$from")" | sed "s@$prefix@@g")"
 
-  mkdir -p "$resulting_path" && cp -vr "$from" "$resulting_path" 2>&1 | tee /tmp/cp_tree.log
+  echo "$from -> $resulting_path" >> /tmp/cp_tree.log
+  mkdir -p "$resulting_path" && cp -vr "$from" "$resulting_path"
 }
 
-add_wim_files() {
+
+change_registry() {
   wim_mountpoint="$(mktemp -d)"
-  wimexport "$ISO_MOUNTPOINT/sources/install.wim" 1 1.wim
-  wimmount 1.wim "$wim_mountpoint"
+  wim_build_mountpoint="$(mktemp -d)"
+
+  wim_file="$1"
+  wimmount "$ISO_MOUNTPOINT/sources/install.wim" 1 "$wim_mountpoint"
+  wimmountrw "$wim_file" "$wim_build_mountpoint"
+
+  (for key in \
+   WOW6432Node \
+   Microsoft\\Wow64 \
+   Microsoft\\Windows\\CurrentVersion\\SideBySide \
+   Microsoft\\Windows\\CurrentVersion\\SMI \
+   Microsoft\\Windows\ NT\\CurrentVersion\\Image\ File\ Execution\ Options
+   do
+      hivexregedit --export "$wim_mountpoint/Windows/System32/config/SOFTWARE" "$key" | \
+        sed '/Windows Registry Editor/d'
+   done) | sed '1i\Windows Registry Editor Version 5.00' > software.reg
+
+  hivexregedit --export "$wim_mountpoint/Windows/System32/config/SYSTEM" ControlSet001\\Services\\msiserver | \
+    sed -e '2i\[\\ControlSet001]' \
+        -e '2i\\n[\\ControlSet001\\Services]' > system.reg
 
 
+  hivexregedit \
+    --export "$wim_mountpoint/Windows/System32/config/SOFTWARE" \
+    Classes\\Wow6432Node | \
+    sed -e 's@^\[@&HKEY_LOCAL_MACHINE\\Software@' > classes.reg
+
+  hivexregedit \
+    --merge "$wim_build_mountpoint/Windows/System32/config/SOFTWARE" \
+    --prefix 'HKEY_LOCAL_MACHINE\Software' \
+    software.reg &
+  merge_pids="$!"
+
+  hivexregedit \
+    --merge "$wim_build_mountpoint/Windows/System32/config/SYSTEM" \
+    --prefix 'HKEY_LOCAL_MACHINE\System' \
+    system.reg &
+  merge_pids="$merge_pids $!"
+
+  wait $merge_pids
+
+  cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/Windows/System32/config/SYSTEM" .
+  cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/Windows/System32/config/SOFTWARE" .
+
+  umount "$wim_mountpoint"
+  umount "$wim_build_mountpoint"
+  rmdir "$wim_mountpoint"
+  rmdir "$wim_build_mountpoint"
+}
+
+
+add_wim_files() {
+  : > /tmp/cp_tree.log
+  wim_mountpoint="$(mktemp -d)"
+  wimmount "$ISO_MOUNTPOINT/sources/install.wim" 1 "$wim_mountpoint"
+
+  STUB_PREFIX="$wim_mountpoint/Windows/FOLDER_STUB"
   COMMON_FILES="
-  $wim_mountpoint/Windows/FOLDER_STUB/CoreMessaging.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/CoreUIComponents.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/CredProv2faHelper.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/CredProvDataModel.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/D3D12.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/DWrite.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/DXCore.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/DataExchange.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/DbgModel.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ExplorerFrame.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/FWPUCLNT.DLL
-  $wim_mountpoint/Windows/FOLDER_STUB/FirewallAPI.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/FlightSettings.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/IPHLPAPI.DLL
-  $wim_mountpoint/Windows/FOLDER_STUB/InputHost.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/KerbClientShared.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/KernelBase.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/KeyCredMgr.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/MMDevAPI.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/NetDriverInstall.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/NetSetupApi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/NetSetupEngine.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/NtlmShared.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/OnDemandConnRouteHelper.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/OneCoreCommonProxyStub.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/OneCoreUAPCommonProxyStub.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/PresentationHostProxy.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/SHCore.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/SSShim.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/SensApi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ServicingCommon.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/StructuredQuery.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/TextInputFramework.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/TextShaping.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/TrustedSignalCredProv.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/UIAnimation.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/UIAutomationCore.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/VAN.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/WcnApi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/WinTypes.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/Windows.UI.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/WofUtil.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/aclui.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/activeds.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/actxprxy.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/adsldp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/adsldpc.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/advapi32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/amsi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/apphelp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/asycfilt.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/atlthunk.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/authui.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/authz.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/avifil32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/avrt.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/browcli.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/cabinet.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/cfgmgr32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/clbcatq.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/cmdext.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/combase.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/comctl32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/console.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/credprovhost.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/credprovs.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/credprovslegacy.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/credssp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/credui.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/crtdll.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/cscapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/d2d1.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/d3d10warp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/d3d11.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/d3d9.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/davhlpr.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dbgcore.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dbgeng.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dbghelp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dciman32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dcomp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ddraw.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/devenum.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/devicengccredprov.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/devobj.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/devrtl.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dfscli.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dfshim.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dhcpcsvc.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dhcpcsvc6.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/diagnosticdataquery.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/difxapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/directmanipulation.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dlnashext.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dnsapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/downlevel/
-  $wim_mountpoint/Windows/FOLDER_STUB/dpapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/drvsetup.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/drvstore.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dsound.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dsrole.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dui70.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/duser.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dwmapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/dxgi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/edgegdi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/edputil.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/eventcls.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/fdWCN.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/fltLib.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/framedynos.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/fveapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/fveapibase.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/fvecerts.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/fwbase.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/fwpolicyiomgr.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/gdi32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/gdi32full.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/glu32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/gpapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/hhctrl.ocx
-  $wim_mountpoint/Windows/FOLDER_STUB/hid.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ieframe.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/iertutil.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/imagehlp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/imm32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/kernel.appcore.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/kernel32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/linkinfo.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/logoncli.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/lz32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mfc42.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mfperfhelper.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mibincodec.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/migration
-  $wim_mountpoint/Windows/FOLDER_STUB/mimofcodec.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mlang.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mpr.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/msIso.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/msacm32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/msacm32.drv
-  $wim_mountpoint/Windows/FOLDER_STUB/msasn1.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mscms.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mscoree.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mscorier.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mscories.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/msctf.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/msdelta.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/msdmo.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mshtml.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/msimsg.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mskeyprotect.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/msls31.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/msvcrt.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/mswsock.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ncobjapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/netapi32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/netfxperf.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/netmsg.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/netutils.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/newdev.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ngclocal.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/normaliz.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/nsi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ntasn1.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ntdll.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ntdsapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ntlanman.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ntmarta.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ntshrui.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/odbc32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ole32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/oleaut32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/opengl32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/pcacli.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/pdh.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/policymanager.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/powrprof.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/profapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/propsys.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/psapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/quartz.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/rasadhlp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/rasapi32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/riched20.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/riched32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/rpcrt4.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/rpcss.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/rsaenh.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/rtutils.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/samcli.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/samlib.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/schannel.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/sechost.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/secur32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/setupapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/sfc.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/sfc_os.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/shdocvw.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/shell32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/shlwapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/slc.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/spapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/spfileq.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/spinf.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/spp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/srpapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/srvcli.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/sspicli.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/sud.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/sxs.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/sxsstore.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/syssetup.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/thumbcache.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/twinapi.appcore.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/twinapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/tzres.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/uReFSv1.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ucrtbase.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ulib.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/umpdc.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/urlmon.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/user32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/userenv.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/usp10.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/uxtheme.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/vbscript.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/version.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/virtdisk.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/vssapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/vsstrace.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wcnwiz.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wdscore.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/webio.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wimgapi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/win32u.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/winbrand.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wincredui.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/windows.storage.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/winhttp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/winhttpcom.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/winmm.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/winmmbase.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/winnlsres.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/winnsi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/winspool.drv
-  $wim_mountpoint/Windows/FOLDER_STUB/winsta.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wintrust.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wkscli.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wldp.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wmi.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wmiclnt.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wow32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/ws2_32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wsock32.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/wtsapi32.dll
+  $STUB_PREFIX/CoreMessaging.dll
+  $STUB_PREFIX/CoreUIComponents.dll
+  $STUB_PREFIX/CredProv2faHelper.dll
+  $STUB_PREFIX/CredProvDataModel.dll
+  $STUB_PREFIX/D3D12.dll
+  $STUB_PREFIX/DWrite.dll
+  $STUB_PREFIX/DXCore.dll
+  $STUB_PREFIX/DataExchange.dll
+  $STUB_PREFIX/DbgModel.dll
+  $STUB_PREFIX/ExplorerFrame.dll
+  $STUB_PREFIX/FWPUCLNT.DLL
+  $STUB_PREFIX/FirewallAPI.dll
+  $STUB_PREFIX/FlightSettings.dll
+  $STUB_PREFIX/IPHLPAPI.DLL
+  $STUB_PREFIX/InputHost.dll
+  $STUB_PREFIX/KerbClientShared.dll
+  $STUB_PREFIX/KernelBase.dll
+  $STUB_PREFIX/KeyCredMgr.dll
+  $STUB_PREFIX/MMDevAPI.dll
+  $STUB_PREFIX/NetDriverInstall.dll
+  $STUB_PREFIX/NetSetupApi.dll
+  $STUB_PREFIX/NetSetupEngine.dll
+  $STUB_PREFIX/NtlmShared.dll
+  $STUB_PREFIX/OnDemandConnRouteHelper.dll
+  $STUB_PREFIX/OneCoreCommonProxyStub.dll
+  $STUB_PREFIX/OneCoreUAPCommonProxyStub.dll
+  $STUB_PREFIX/PresentationHostProxy.dll
+  $STUB_PREFIX/SHCore.dll
+  $STUB_PREFIX/SSShim.dll
+  $STUB_PREFIX/SensApi.dll
+  $STUB_PREFIX/ServicingCommon.dll
+  $STUB_PREFIX/StructuredQuery.dll
+  $STUB_PREFIX/TextInputFramework.dll
+  $STUB_PREFIX/TextShaping.dll
+  $STUB_PREFIX/TrustedSignalCredProv.dll
+  $STUB_PREFIX/UIAnimation.dll
+  $STUB_PREFIX/UIAutomationCore.dll
+  $STUB_PREFIX/VAN.dll
+  $STUB_PREFIX/WcnApi.dll
+  $STUB_PREFIX/WinTypes.dll
+  $STUB_PREFIX/Windows.UI.dll
+  $STUB_PREFIX/WofUtil.dll
+  $STUB_PREFIX/aclui.dll
+  $STUB_PREFIX/activeds.dll
+  $STUB_PREFIX/actxprxy.dll
+  $STUB_PREFIX/adsldp.dll
+  $STUB_PREFIX/adsldpc.dll
+  $STUB_PREFIX/advapi32.dll
+  $STUB_PREFIX/amsi.dll
+  $STUB_PREFIX/apphelp.dll
+  $STUB_PREFIX/asycfilt.dll
+  $STUB_PREFIX/atlthunk.dll
+  $STUB_PREFIX/authui.dll
+  $STUB_PREFIX/authz.dll
+  $STUB_PREFIX/avifil32.dll
+  $STUB_PREFIX/avrt.dll
+  $STUB_PREFIX/browcli.dll
+  $STUB_PREFIX/cabinet.dll
+  $STUB_PREFIX/cfgmgr32.dll
+  $STUB_PREFIX/clbcatq.dll
+  $STUB_PREFIX/cmdext.dll
+  $STUB_PREFIX/combase.dll
+  $STUB_PREFIX/comctl32.dll
+  $STUB_PREFIX/console.dll
+  $STUB_PREFIX/credprovhost.dll
+  $STUB_PREFIX/credprovs.dll
+  $STUB_PREFIX/credprovslegacy.dll
+  $STUB_PREFIX/credssp.dll
+  $STUB_PREFIX/credui.dll
+  $STUB_PREFIX/crtdll.dll
+  $STUB_PREFIX/cscapi.dll
+  $STUB_PREFIX/d2d1.dll
+  $STUB_PREFIX/d3d10warp.dll
+  $STUB_PREFIX/d3d11.dll
+  $STUB_PREFIX/d3d9.dll
+  $STUB_PREFIX/davhlpr.dll
+  $STUB_PREFIX/dbgcore.dll
+  $STUB_PREFIX/dbgeng.dll
+  $STUB_PREFIX/dbghelp.dll
+  $STUB_PREFIX/dciman32.dll
+  $STUB_PREFIX/dcomp.dll
+  $STUB_PREFIX/ddraw.dll
+  $STUB_PREFIX/devenum.dll
+  $STUB_PREFIX/devicengccredprov.dll
+  $STUB_PREFIX/devobj.dll
+  $STUB_PREFIX/devrtl.dll
+  $STUB_PREFIX/dfscli.dll
+  $STUB_PREFIX/dfshim.dll
+  $STUB_PREFIX/dhcpcsvc.dll
+  $STUB_PREFIX/dhcpcsvc6.dll
+  $STUB_PREFIX/diagnosticdataquery.dll
+  $STUB_PREFIX/difxapi.dll
+  $STUB_PREFIX/directmanipulation.dll
+  $STUB_PREFIX/dlnashext.dll
+  $STUB_PREFIX/dnsapi.dll
+  $STUB_PREFIX/dpapi.dll
+  $STUB_PREFIX/drvsetup.dll
+  $STUB_PREFIX/drvstore.dll
+  $STUB_PREFIX/dsound.dll
+  $STUB_PREFIX/dsrole.dll
+  $STUB_PREFIX/dui70.dll
+  $STUB_PREFIX/duser.dll
+  $STUB_PREFIX/dwmapi.dll
+  $STUB_PREFIX/dxgi.dll
+  $STUB_PREFIX/edgegdi.dll
+  $STUB_PREFIX/edputil.dll
+  $STUB_PREFIX/eventcls.dll
+  $STUB_PREFIX/fdWCN.dll
+  $STUB_PREFIX/fltLib.dll
+  $STUB_PREFIX/framedynos.dll
+  $STUB_PREFIX/fveapi.dll
+  $STUB_PREFIX/fveapibase.dll
+  $STUB_PREFIX/fvecerts.dll
+  $STUB_PREFIX/fwbase.dll
+  $STUB_PREFIX/fwpolicyiomgr.dll
+  $STUB_PREFIX/gdi32.dll
+  $STUB_PREFIX/gdi32full.dll
+  $STUB_PREFIX/glu32.dll
+  $STUB_PREFIX/gpapi.dll
+  $STUB_PREFIX/hhctrl.ocx
+  $STUB_PREFIX/hid.dll
+  $STUB_PREFIX/ieframe.dll
+  $STUB_PREFIX/iertutil.dll
+  $STUB_PREFIX/imagehlp.dll
+  $STUB_PREFIX/imm32.dll
+  $STUB_PREFIX/kernel.appcore.dll
+  $STUB_PREFIX/kernel32.dll
+  $STUB_PREFIX/linkinfo.dll
+  $STUB_PREFIX/logoncli.dll
+  $STUB_PREFIX/lz32.dll
+  $STUB_PREFIX/mfc42.dll
+  $STUB_PREFIX/mfperfhelper.dll
+  $STUB_PREFIX/mibincodec.dll
+  $STUB_PREFIX/migration
+  $STUB_PREFIX/mimofcodec.dll
+  $STUB_PREFIX/mlang.dll
+  $STUB_PREFIX/mpr.dll
+  $STUB_PREFIX/msIso.dll
+  $STUB_PREFIX/msacm32.dll
+  $STUB_PREFIX/msacm32.drv
+  $STUB_PREFIX/msasn1.dll
+  $STUB_PREFIX/mscms.dll
+  $STUB_PREFIX/mscoree.dll
+  $STUB_PREFIX/mscorier.dll
+  $STUB_PREFIX/mscories.dll
+  $STUB_PREFIX/msctf.dll
+  $STUB_PREFIX/msdelta.dll
+  $STUB_PREFIX/msdmo.dll
+  $STUB_PREFIX/mshtml.dll
+  $STUB_PREFIX/msimsg.dll
+  $STUB_PREFIX/mskeyprotect.dll
+  $STUB_PREFIX/msls31.dll
+  $STUB_PREFIX/msvcrt.dll
+  $STUB_PREFIX/mswsock.dll
+  $STUB_PREFIX/ncobjapi.dll
+  $STUB_PREFIX/netapi32.dll
+  $STUB_PREFIX/netfxperf.dll
+  $STUB_PREFIX/netmsg.dll
+  $STUB_PREFIX/netutils.dll
+  $STUB_PREFIX/newdev.dll
+  $STUB_PREFIX/ngclocal.dll
+  $STUB_PREFIX/normaliz.dll
+  $STUB_PREFIX/nsi.dll
+  $STUB_PREFIX/ntasn1.dll
+  $STUB_PREFIX/ntdll.dll
+  $STUB_PREFIX/ntdsapi.dll
+  $STUB_PREFIX/ntlanman.dll
+  $STUB_PREFIX/ntmarta.dll
+  $STUB_PREFIX/ntshrui.dll
+  $STUB_PREFIX/odbc32.dll
+  $STUB_PREFIX/opengl32.dll
+  $STUB_PREFIX/pcacli.dll
+  $STUB_PREFIX/pdh.dll
+  $STUB_PREFIX/policymanager.dll
+  $STUB_PREFIX/powrprof.dll
+  $STUB_PREFIX/profapi.dll
+  $STUB_PREFIX/propsys.dll
+  $STUB_PREFIX/psapi.dll
+  $STUB_PREFIX/quartz.dll
+  $STUB_PREFIX/rasadhlp.dll
+  $STUB_PREFIX/rasapi32.dll
+  $STUB_PREFIX/riched20.dll
+  $STUB_PREFIX/riched32.dll
+  $STUB_PREFIX/rpcrt4.dll
+  $STUB_PREFIX/rpcss.dll
+  $STUB_PREFIX/rsaenh.dll
+  $STUB_PREFIX/rtutils.dll
+  $STUB_PREFIX/samcli.dll
+  $STUB_PREFIX/samlib.dll
+  $STUB_PREFIX/schannel.dll
+  $STUB_PREFIX/sechost.dll
+  $STUB_PREFIX/secur32.dll
+  $STUB_PREFIX/setupapi.dll
+  $STUB_PREFIX/sfc.dll
+  $STUB_PREFIX/sfc_os.dll
+  $STUB_PREFIX/shdocvw.dll
+  $STUB_PREFIX/shell32.dll
+  $STUB_PREFIX/shunimpl.dll
+  $STUB_PREFIX/shlwapi.dll
+  $STUB_PREFIX/slc.dll
+  $STUB_PREFIX/spapi.dll
+  $STUB_PREFIX/spfileq.dll
+  $STUB_PREFIX/spinf.dll
+  $STUB_PREFIX/spp.dll
+  $STUB_PREFIX/srpapi.dll
+  $STUB_PREFIX/srvcli.dll
+  $STUB_PREFIX/sspicli.dll
+  $STUB_PREFIX/sud.dll
+  $STUB_PREFIX/sxs.dll
+  $STUB_PREFIX/sxsstore.dll
+  $STUB_PREFIX/syssetup.dll
+  $STUB_PREFIX/thumbcache.dll
+  $STUB_PREFIX/twinapi.appcore.dll
+  $STUB_PREFIX/twinapi.dll
+  $STUB_PREFIX/tzres.dll
+  $STUB_PREFIX/uReFSv1.dll
+  $STUB_PREFIX/ucrtbase.dll
+  $STUB_PREFIX/ulib.dll
+  $STUB_PREFIX/umpdc.dll
+  $STUB_PREFIX/urlmon.dll
+  $STUB_PREFIX/user32.dll
+  $STUB_PREFIX/userenv.dll
+  $STUB_PREFIX/usp10.dll
+  $STUB_PREFIX/uxtheme.dll
+  $STUB_PREFIX/vbscript.dll
+  $STUB_PREFIX/version.dll
+  $STUB_PREFIX/virtdisk.dll
+  $STUB_PREFIX/vssapi.dll
+  $STUB_PREFIX/vsstrace.dll
+  $STUB_PREFIX/wcnwiz.dll
+  $STUB_PREFIX/wdscore.dll
+  $STUB_PREFIX/webio.dll
+  $STUB_PREFIX/wimgapi.dll
+  $STUB_PREFIX/win32u.dll
+  $STUB_PREFIX/winbrand.dll
+  $STUB_PREFIX/wincredui.dll
+  $STUB_PREFIX/windows.storage.dll
+  $STUB_PREFIX/winhttp.dll
+  $STUB_PREFIX/winhttpcom.dll
+  $STUB_PREFIX/winmm.dll
+  $STUB_PREFIX/winmmbase.dll
+  $STUB_PREFIX/winnlsres.dll
+  $STUB_PREFIX/winnsi.dll
+  $STUB_PREFIX/winspool.drv
+  $STUB_PREFIX/winsta.dll
+  $STUB_PREFIX/wintrust.dll
+  $STUB_PREFIX/wkscli.dll
+  $STUB_PREFIX/wldp.dll
+  $STUB_PREFIX/wmi.dll
+  $STUB_PREFIX/wmiclnt.dll
+  $STUB_PREFIX/wow32.dll
+  $STUB_PREFIX/ws2_32.dll
+  $STUB_PREFIX/wsock32.dll
+  $STUB_PREFIX/wtsapi32.dll
 
+  $STUB_PREFIX/msiexec.exe
+  $STUB_PREFIX/sc.exe
 
-  $wim_mountpoint/Windows/FOLDER_STUB/en-US
-  $wim_mountpoint/Windows/FOLDER_STUB/Dism
-  $wim_mountpoint/Windows/FOLDER_STUB/SMI
-  $wim_mountpoint/Windows/FOLDER_STUB/downlevel
-  $wim_mountpoint/Windows/FOLDER_STUB/AdvancedInstallers
+  $STUB_PREFIX/en-US/
+  $STUB_PREFIX/Dism/
+  $STUB_PREFIX/SMI/
+  $STUB_PREFIX/downlevel/
+  $STUB_PREFIX/AdvancedInstallers/
   "
 
   COMMON_FILES_GLOB="
-  $wim_mountpoint/Windows/FOLDER_STUB/*.mui
-  $wim_mountpoint/Windows/FOLDER_STUB/*client*
-  $wim_mountpoint/Windows/FOLDER_STUB/*crypt*.dll
-  $wim_mountpoint/Windows/FOLDER_STUB/*xml*
-  $wim_mountpoint/Windows/FOLDER_STUB/C_*.NLS
-  $wim_mountpoint/Windows/FOLDER_STUB/Windows*
-  $wim_mountpoint/Windows/FOLDER_STUB/msi*
-  $wim_mountpoint/Windows/FOLDER_STUB/msv*
-  $wim_mountpoint/Windows/FOLDER_STUB/ole*
-  $wim_mountpoint/Windows/FOLDER_STUB/rpc*
-  $wim_mountpoint/Windows/FOLDER_STUB/wbem*
-  $wim_mountpoint/Windows/FOLDER_STUB/windows*
-  $wim_mountpoint/Windows/FOLDER_STUB/wininet*
-  $wim_mountpoint/Windows/FOLDER_STUB/vcrun*
-  $wim_mountpoint/Windows/FOLDER_STUB/ucrt*
-  $wim_mountpoint/Windows/FOLDER_STUB/msvcp*
+  $STUB_PREFIX/*.mui
+  $STUB_PREFIX/*client*
+  $STUB_PREFIX/*crypt*.dll
+  $STUB_PREFIX/*xml*
+  $STUB_PREFIX/C_*.NLS
+  $STUB_PREFIX/Windows*
+  $STUB_PREFIX/msi*
+  $STUB_PREFIX/msv*
+  $STUB_PREFIX/ole*
+  $STUB_PREFIX/rpc*
+  $STUB_PREFIX/wbem*
+  $STUB_PREFIX/windows*
+  $STUB_PREFIX/wininet*
+  $STUB_PREFIX/vcrun*
+  $STUB_PREFIX/ucrt*
+  $STUB_PREFIX/msvcp*
   "
 
   WOW64_FILES="
@@ -346,11 +403,12 @@ add_wim_files() {
         'comdlg32*' \
         'windowui*' \
         'installer-engine*' \
+        '*ntdll*' \
         'i..xecutable.resources*'
       do
-        eval echo "$wim_mountpoint/Windows/WinSxS/${arch}_microsoft-windows-$package"
-        eval echo "$wim_mountpoint/Windows/WinSxS/${arch}_microsoft.windows.$package"
-        eval echo "$wim_mountpoint/Windows/WinSxS/Manifests/${arch}_microsoft.windows.$package"
+        compgen -G "$wim_mountpoint/Windows/WinSxS/${arch}_microsoft-windows-$package"
+        compgen -G "$wim_mountpoint/Windows/WinSxS/${arch}_microsoft.windows.$package"
+        compgen -G "$wim_mountpoint/Windows/WinSxS/Manifests/${arch}_microsoft.windows.$package"
       done
     done)
   "
@@ -364,59 +422,54 @@ add_wim_files() {
   for fs_node in $FILES_TO_INSTALL
   do
     cp_tree "$wim_mountpoint" "$fs_node" . &
+    cp_pids="$cp_pids $!"
   done
+  wait $cp_pids
 
-  wait $(jobs -p)
+  cat > chocolatey.cmd << EOF
+@"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "[System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
+EOF
 
-
-  (for key in \
-   WOW6432Node \
-   Classes\\Wow6432Node \
-   Microsoft\\Wow64 \
-   Microsoft\\Windows\\CurrentVersion\\SideBySide \
-   Microsoft\\Windows\\CurrentVersion\\SMI
-   do
-      hivexregedit --export "$wim_mountpoint/Windows/System32/config/SOFTWARE" "$key" | \
-        sed -e 's@^\[@&HKEY_LOCAL_MACHINE\\Software@' -e '/Windows Registry Editor/d'
-   done) | sed '1i\Windows Registry Editor Version 5.00' > wow6432.reg
-
-  cp wow6432.reg /tmp
-
-  wimunmount "$wim_mountpoint"
+  umount "$wim_mountpoint"
   rmdir "$wim_mountpoint"
-  rm 1.wim
 }
 
 
 cd "$DOWNLOAD_DIR"
 
 wget https://github.com/Open-Shell/Open-Shell-Menu/releases/download/v4.4.191/OpenShellSetup_4_4_191.exe &
+##
+##WINETRICKS="https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks"
+##wget "$WINETRICKS"
+##
+#wget https://github.com/git-for-windows/git/releases/download/v2.42.0.windows.2/PortableGit-2.42.0.2-64-bit.7z.exe &
 #
-#WINETRICKS="https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks"
-#wget "$WINETRICKS"
-#
-wget https://github.com/git-for-windows/git/releases/download/v2.42.0.windows.2/PortableGit-2.42.0.2-64-bit.7z.exe &
-
 #wget https://download.visualstudio.microsoft.com/download/pr/7afca223-55d2-470a-8edc-6a1739ae3252/abd170b4b0ec15ad0222a809b761a036/ndp48-x86-x64-allos-enu.exe
-
-#wget https://www.python.org/ftp/python/3.12.0/python-3.12.0-embed-win32.zip
-#unzip python-3.12.0-embed-win32.zip
-
-(wget https://www.python.org/ftp/python/3.12.0/python-3.12.0-embed-amd64.zip &&
-unzip python-3.12.0-embed-amd64.zip) &
-
+#
+##wget https://www.python.org/ftp/python/3.12.0/python-3.12.0-embed-win32.zip
+##unzip -o python-3.12.0-embed-win32.zip
+#
+#(wget https://www.python.org/ftp/python/3.12.0/python-3.12.0-embed-amd64.zip &&
+#unzip -o python-3.12.0-embed-amd64.zip) &
+#
 (wget https://download.sysinternals.com/files/SysinternalsSuite.zip &&
-unzip SysinternalsSuite.zip) &
+unzip -o SysinternalsSuite.zip) &
+#
+#wget https://download.microsoft.com/download/6/D/F/6DF3FF94-F7F9-4F0B-838C-A328D1A7D0EE/vc_redist.x64.exe
+#
+##cp /home/user/Coding/minimal-winpe/install.py "$DOWNLOAD_DIR"
+#
+wget https://github.com/PowerShell/PowerShell/releases/download/v7.3.3/PowerShell-7.3.3-win-x64.msi &
 
-get https://download.microsoft.com/download/6/D/F/6DF3FF94-F7F9-4F0B-838C-A328D1A7D0EE/vc_redist.x64.exe
-
-#cp /home/user/Coding/minimal-winpe/install.py "$DOWNLOAD_DIR"
-
-
-(wget https://github.com/lucasg/Dependencies/releases/download/v1.11.1/Dependencies_x64_Release.zip &&
-unzip Dependencies_x64_Release.zip) &
+(wget https://sourceforge.net/projects/processhacker/files/processhacker2/processhacker-2.39-bin.zip &&
+unzip -o processhacker-2.39-bin.zip) &
+#
+#(wget https://github.com/lucasg/Dependencies/releases/download/v1.11.1/Dependencies_x64_Release.zip &&
+#unzip -o Dependencies_x64_Release.zip) &
+# "
 
 add_wim_files &
+change_registry "$DEFAULT_WIM" &
 
 wait $(jobs -p)
 
