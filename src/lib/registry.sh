@@ -3,31 +3,23 @@
 export_key() {
   local file="$1"
   local key="$2"
-  local key_ptr="$key"
-  local upper_keys=
+  key_ptr="$key"
+  upper_keys=
   while echo $key_ptr | grep -F \\ &>/dev/null
   do
     key_ptr="$(echo "$key_ptr" | sed 's/\\[^\\]*$//')"
-    upper_keys="$upper_keys $key_ptr"
+    upper_keys="[\\$key_ptr] $upper_keys"
   done
 
-  local sed_part=
-  local sed_script=
-  for key in $upper_keys
-  do
-    sed_part="-e '1a\\[\\$key]'"
-    sed_script="$sed_part $sed_script"
-  done
-  sed_script="$(echo "$sed_script" | sed 's@\\@&&@g' | sed 's/1a\\\\/1a\\/g')"
-
-  hivexregedit --export "$file" "$2" | eval sed $sed_script
+  local text="$(echo "$upper_keys" | sed -e 's@\\@&&@g' -e 's@\] \[@]\\n[@g')"
+  hivexregedit --export "$file" "$2" | sed -e "1a\\$text"
 }
 
 
 export_multiple() {
   local file="$1"
-  local keys="$2"
-  for key in $keys
+  shift
+  for key in "$@"
   do
     export_key "$file" "$key" | sed '/Windows Registry Editor/d'
   done | sed '1i\Windows Registry Editor Version 5.00'
@@ -47,9 +39,9 @@ export_multiple_and_merge() {
   local prefix="$1"
   local from="$2"
   local to="$3"
-  local keys="$@"
+  shift 3
 
-  export_multiple "$from" "$keys" | merge_registry "$to" "$prefix"
+  export_multiple "$from" "$@" | merge_registry "$to" "$prefix"
 }
 
 
