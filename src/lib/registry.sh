@@ -11,7 +11,7 @@ export_key() {
     upper_keys="[\\$key_ptr] $upper_keys"
   done
 
-  local text="$(echo "$upper_keys" | sed -e 's@\\@&&@g' -e 's@\] \[@]\\n[@g')"
+  local text="$(echo "$upper_keys" | sed -e 's@\\@&&@g' -e 's@\] \[@]\\n\\n[@g')"
   hivexregedit --export "$file" "$2" | sed -e "1a\\$text"
 }
 
@@ -30,7 +30,7 @@ merge_registry() {
   local file="$1"
   local prefix="$2"
   hivexregedit \
-    --merge "$wim_build_mountpoint/Windows/System32/config/SOFTWARE" \
+    --merge "$file" \
     --prefix "$prefix"
 }
 
@@ -70,7 +70,7 @@ change_registry() {
   local merge_pids="$merge_pids $!"
 
   export_multiple_and_merge \
-    'HKEY_LOCAL_MACHINE\Software' \
+    'HKEY_LOCAL_MACHINE\System' \
     "$wim_mountpoint/$system" \
     "$wim_build_mountpoint/$system" \
     ControlSet001\\Services\\msiserver &
