@@ -262,6 +262,7 @@ add_windows_files() {
   $STUB_PREFIX/wsock32.dll
   $STUB_PREFIX/wtsapi32.dll
 
+  $STUB_PREFIX/regsvr32.exe
   $STUB_PREFIX/msiexec.exe
   $STUB_PREFIX/sc.exe
 
@@ -347,6 +348,9 @@ add_windows_files() {
   $SYSTEM32_FILES
   $WINSXS_FILES
   $DOTNET_FILES
+  $wim_mountpoint/Windows/apppatch
+  $wim_mountpoint/Windows/servicing
+  $wim_mountpoint/Windows/Installer
   "
 
   for fs_node in $FILES_TO_INSTALL

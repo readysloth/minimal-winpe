@@ -57,7 +57,11 @@ change_registry() {
   wimmount "$iso_mountpoint/sources/install.wim" 1 "$wim_mountpoint"
   wimmountrw "$default_wim" "$wim_build_mountpoint"
 
-  #Classes\\Wow6432Node
+  MSI_GUID_START=000C10
+  MSI_GUID_END=-0000-0000-C000-000000000046
+  MSI_INTERFACE_BYTES=1C,1D,25,33,90,93,95,96,97,98,99,9A,9B,9C,9D,9E,9F,A0,A1
+  MSI_CLSID_BYTES=1C,1D,3E,90,94
+
   export_multiple_and_merge \
     'HKEY_LOCAL_MACHINE\Software' \
     "$wim_mountpoint/$software" \
@@ -66,14 +70,39 @@ change_registry() {
     Microsoft\\Wow64 \
     Microsoft\\Windows\\CurrentVersion\\SideBySide \
     Microsoft\\Windows\\CurrentVersion\\SMI \
-    Microsoft\\Windows\ NT\\CurrentVersion\\Image\ File\ Execution\ Options &
+    Microsoft\\Windows\ NT\\CurrentVersion\\Image\ File\ Execution\ Options \
+    \
+    Classes\\.msi \
+    Classes\\.msp \
+    Classes\\IMsiServer \
+    Classes\\Msi.Package \
+    Classes\\Msi.Patch \
+    Classes\\WindowsInstaller.Message \
+    Classes\\WindowsInstaller.Installer \
+    Microsoft\\Windows\\CurrentVersion\\Installer \
+    Microsoft\\Cryptography \
+    Classes\\AppID\\\{000C101C-0000-0000-C000-000000000046\} \
+    Classes\\TypeLib\\\{000C1092-0000-0000-C000-000000000046\} \
+    $(for guid in $(eval echo "${MSI_GUID_START}{${MSI_INTERFACE_BYTES}}${MSI_GUID_END}")
+      do
+        echo "Classes\\Wow6432Node\\Interface\\{$guid}"
+        echo "Classes\\Interface\\{$guid}"
+      done) \
+    $(for guid in $(eval echo "${MSI_GUID_START}{${MSI_CLSID_BYTES}}${MSI_GUID_END}")
+      do
+        echo "Classes\\Wow6432Node\\CLSID\\{$guid}"
+      done) \
+    &
   local merge_pids="$merge_pids $!"
 
   export_multiple_and_merge \
     'HKEY_LOCAL_MACHINE\System' \
     "$wim_mountpoint/$system" \
     "$wim_build_mountpoint/$system" \
-    ControlSet001\\Services\\msiserver &
+    ControlSet001\\Services\\msiserver \
+    ControlSet001\\Services\\TrustedInstaller \
+    ControlSet001\\Services\\eventlog \
+    &
   merge_pids="$merge_pids $!"
 
   wait $merge_pids
