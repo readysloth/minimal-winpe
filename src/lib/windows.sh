@@ -33,7 +33,6 @@ add_windows_files() {
   $STUB_PREFIX/OnDemandConnRouteHelper.dll
   $STUB_PREFIX/OneCoreCommonProxyStub.dll
   $STUB_PREFIX/OneCoreUAPCommonProxyStub.dll
-  $STUB_PREFIX/PresentationHostProxy.dll
   $STUB_PREFIX/SHCore.dll
   $STUB_PREFIX/SSShim.dll
   $STUB_PREFIX/SensApi.dll
@@ -47,7 +46,6 @@ add_windows_files() {
   $STUB_PREFIX/VAN.dll
   $STUB_PREFIX/WcnApi.dll
   $STUB_PREFIX/WinTypes.dll
-  $STUB_PREFIX/Windows.UI.dll
   $STUB_PREFIX/WofUtil.dll
   $STUB_PREFIX/aclui.dll
   $STUB_PREFIX/activeds.dll
@@ -223,7 +221,6 @@ add_windows_files() {
   $STUB_PREFIX/twinapi.dll
   $STUB_PREFIX/tzres.dll
   $STUB_PREFIX/uReFSv1.dll
-  $STUB_PREFIX/ucrtbase.dll
   $STUB_PREFIX/ulib.dll
   $STUB_PREFIX/umpdc.dll
   $STUB_PREFIX/urlmon.dll
@@ -261,6 +258,7 @@ add_windows_files() {
   $STUB_PREFIX/ws2_32.dll
   $STUB_PREFIX/wsock32.dll
   $STUB_PREFIX/wtsapi32.dll
+  $STUB_PREFIX/FntCache.dll
 
   $STUB_PREFIX/regsvr32.exe
   $STUB_PREFIX/msiexec.exe
@@ -290,6 +288,7 @@ add_windows_files() {
   $STUB_PREFIX/vcrun*
   $STUB_PREFIX/ucrt*
   $STUB_PREFIX/msvcp*
+  $STUB_PREFIX/Presentation*
   "
 
   local WOW64_FILES="
@@ -315,10 +314,14 @@ add_windows_files() {
     done)
   "
 
-  local DOTNET_FILES="
-  $wim_mountpoint/Windows/assembly
-  $wim_mountpoint/Windows/Microsoft.NET
-  "
+  local DOTNET_FILES=(
+  "$wim_mountpoint"/Windows/assembly
+  "$wim_mountpoint"/Windows/Microsoft.NET
+  "$wim_mountpoint"/Program\ Files/Microsoft.NET
+  "$wim_mountpoint"/Program\ Files/Reference\ Assemblies
+  "$wim_mountpoint"/Program\ Files\ \(x86\)/Microsoft.NET
+  "$wim_mountpoint"/Program\ Files\ \(x86\)/Reference Assemblies
+  )
 
   local WINSXS_FILES="
   $(for arch in amd64 x86
@@ -343,17 +346,17 @@ add_windows_files() {
       done
     done)
   "
-  local FILES_TO_INSTALL="
+  local FILES_TO_INSTALL=(
   $WOW64_FILES
   $SYSTEM32_FILES
   $WINSXS_FILES
-  $DOTNET_FILES
-  $wim_mountpoint/Windows/apppatch
-  $wim_mountpoint/Windows/servicing
-  $wim_mountpoint/Windows/Installer
-  "
+  "${DOTNET_FILES[@]}"
+  "$wim_mountpoint"/Windows/apppatch
+  "$wim_mountpoint"/Windows/servicing
+  "$wim_mountpoint"/Windows/Installer
+  )
 
-  for fs_node in $FILES_TO_INSTALL
+  for fs_node in "${FILES_TO_INSTALL[@]}"
   do
     cp_tree "$wim_mountpoint" "$fs_node" . &
     cp_pids="$cp_pids $!"
