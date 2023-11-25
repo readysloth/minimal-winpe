@@ -292,7 +292,7 @@ add_windows_files() {
 
   local system_files=()
 
-  for system_folder in SysWow64 System32
+  for system_folder in SysWOW64 System32
   do
     mapfile -t individual_files < \
       <(for path_template in "${common_files[@]}"
