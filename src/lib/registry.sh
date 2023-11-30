@@ -48,6 +48,7 @@ export_multiple_and_merge() {
 change_registry() {
   local system="Windows/System32/config/SYSTEM"
   local software="Windows/System32/config/SOFTWARE"
+  local drivers="Windows/System32/config/DRIVERS"
 
   local wim_mountpoint="$(mktemp -d)"
   local wim_build_mountpoint="$(mktemp -d)"
@@ -67,8 +68,35 @@ change_registry() {
 
   local msi_guid_start=000C10
   local msi_guid_end=-0000-0000-C000-000000000046
-  local msi_interface_bytes=1C,1D,25,33,90,93,95,96,97,98,99,9A,9B,9C,9D,9E,9F,A0,A1
-  local msi_clsid_bytes=1C,1D,3E,90,94
+  local msi_interface_bytes=(1C 1D 3E 25 33 90 92 93 94 95 96 97 98 99 9A 9B 9C 9D 9E 9F A0 A1)
+  #local byterange=({0..9}{0..9} {0..9}{A..F} {A..F}{0..9} {A..F}{A..F})
+  mapfile -t msi_guids < \
+    <(for byte in "${msi_interface_bytes[@]}"
+      do
+        echo "${msi_guid_start}${byte}${msi_guid_end}"
+      done)
+
+  mapfile -t classes_msi_branches < \
+    <(for guid in "${msi_guids[@]}"
+      do
+        echo "Classes\\Wow6432Node\\AppID\\{$guid}"
+        echo "Classes\\Wow6432Node\\CLSID\\{$guid}"
+        echo "Classes\\Wow6432Node\\TypeLib\\{$guid}"
+        echo "Classes\\Wow6432Node\\Interface\\{$guid}"
+        echo "Classes\\AppID\\{$guid}"
+        echo "Classes\\CLSID\\{$guid}"
+        echo "Classes\\TypeLib\\{$guid}"
+        echo "Classes\\Interface\\{$guid}"
+      done)
+
+  local software_msxml_branches=(
+    Classes\\CLSID\\\{F6D90F11-9C73-11D3-B32E-00C04F990BB4\}
+    Classes\\Wow6432Node\\CLSID\\\{F6D90F11-9C73-11D3-B32E-00C04F990BB4\}
+    Classes\\CLSID\\\{F6D90F14-9C73-11D3-B32E-00C04F990BB4\}
+    Classes\\Wow6432Node\\CLSID\\\{F6D90F14-9C73-11D3-B32E-00C04F990BB4\}
+    Classes\\CLSID\\\{F5078F32-C551-11D3-89B9-0000F81FE221\}
+    Classes\\Wow6432Node\\CLSID\\\{F5078F32-C551-11D3-89B9-0000F81FE221\}
+  )
 
   local software_msi_branches=(
   Classes\\.msi
@@ -78,19 +106,11 @@ change_registry() {
   Classes\\Msi.Patch
   Classes\\WindowsInstaller.Message
   Classes\\WindowsInstaller.Installer
-  Classes\\AppID\\\{000C101C-0000-0000-C000-000000000046\}
-  Classes\\TypeLib\\\{000C1092-0000-0000-C000-000000000046\}
+  Classes\\CLSID\\\{BE0A9830-2B8B-11D1-A949-0060181EBBAD\}
   Microsoft\\Windows\\CurrentVersion\\Installer
   Microsoft\\Cryptography
-  $(for guid in $(eval echo "${msi_guid_start}{${msi_interface_bytes}}${msi_guid_end}")
-    do
-      echo "Classes\\Wow6432Node\\Interface\\{$guid}"
-      echo "Classes\\Interface\\{$guid}"
-    done)
-  $(for guid in $(eval echo "${msi_guid_start}{${msi_clsid_bytes}}${msi_guid_end}")
-    do
-      echo "Classes\\Wow6432Node\\CLSID\\{$guid}"
-    done)
+  "${classes_msi_branches[@]}"
+  "${software_msxml_branches[@]}"
   )
 
   local system_msi_branches=(
@@ -139,6 +159,7 @@ change_registry() {
 
   cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$system" .
   cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$software" .
+  cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$drivers" .
 
   umount "$wim_mountpoint"
   umount "$wim_build_mountpoint"
