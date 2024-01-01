@@ -12,9 +12,62 @@ DEFAULT_WIM="$2"
 
 cd "$DOWNLOAD_DIR"
 
-add_windows_files "$ISO_MOUNTPOINT" &
-change_registry "$DEFAULT_WIM" "$ISO_MOUNTPOINT"
+regsvr() {
+  from="$1"
+  resulting_path="$2"
+
+  filename="$(basename "$from")"
+  resulting_file="$resulting_path/$filename"
+
+  if [[ "$resulting_file" == *System32/*dll ]]
+  then
+    echo "%SystemRoot%\\System32\\regsvr32.exe /S \"%SystemRoot%\\System32\\$filename\"" >> ./Windows/System32/startnet.cmd
+  fi
+}
+
+download_packages &>/dev/null &
+add_windows_files "$ISO_MOUNTPOINT" regsvr & #&>/dev/null &
+change_registry "$DEFAULT_WIM" "$ISO_MOUNTPOINT" &
 
 wait $(jobs -p)
+
+mkdir -p postinstall_tree/Windows/System32
+cp Windows/System32/startnet.cmd postinstall_tree/Windows/System32/startnet.cmd
+
+cat >> ./Windows/System32/startnet.cmd << "EOF"
+set PATH=%SystemRoot%;%SystemRoot%\System32;%SystemRoot%\System32\Wbem;%SystemDrive%\Applications;%SystemDrive%\Applications\x64
+
+REM PENetwork.exe
+
+wpeutil SetKeyboardLayout 0409:00000409
+wpeutil SetUserLocale en-US
+cls
+
+diskpart /s X:\diskpart.script
+dism /Apply-Image /ImageFile:"D:\sources\boot.wim" /Index:1 /ApplyDir:Z:\
+BCDboot Z:\Windows /s Z: /f ALL
+EOF
+
+for entity in postinstall_tree/*
+do
+  target_path=${entity/postinstall_tree\//}
+  target_path=${target_path//\//\\}
+  echo "xcopy X:\\postinstall_tree\\${target_path} Z:\\$target_path /e /y" >> ./Windows/System32/startnet.cmd
+done
+
+
+cat >> ./Windows/System32/startnet.cmd << "EOF"
+del /s /q Z:\postinstall_tree
+EOF
+
+
+cat >> diskpart.script << EOF
+select disk 0
+clean
+create partition primary size=16000
+format quick fs=fat32 label="Windows PE"
+assign letter=Z
+active
+EOF
 
 echo "$DOWNLOAD_DIR"

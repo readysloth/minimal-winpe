@@ -4,8 +4,8 @@ cp_tree() {
   to="$3"
   callback="${4:-:}"
   resulting_path="$(echo "$to/$(dirname "$from")" | sed "s@$prefix@@g")"
+  resulting_path="${resulting_path//$prefix/}"
 
-  echo "$from -> $resulting_path" >> /tmp/cp_tree.log
-  mkdir -p "$resulting_path" && cp -vr "$from" "$resulting_path"
+  mkdir -p "$resulting_path" && cp -r "$from" "$resulting_path"
   $callback "$from" "$resulting_path"
 }

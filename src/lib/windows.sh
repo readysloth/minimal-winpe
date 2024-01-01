@@ -1,12 +1,36 @@
 . "$(dirname "$0")/lib/common.sh"
 
-add_windows_files() {
-  local wim_mountpoint
-  wim_mountpoint="$(mktemp -d)"
-  local iso_mountpoint="$1"
-  local callback="${2:-:}"
-  wimmount "$iso_mountpoint/sources/install.wim" 1 "$wim_mountpoint"
+format_filenames_for_find() {
+  find_opts="$(printf " -o -iname %s " "$@")"
+  echo "${find_opts/-o/}"
+}
 
+find_files_cmd() {
+  local src_folder="$1"
+  shift
+  local args="$*"
+  echo "find '$src_folder' $args"
+}
+
+parallel_get_filelist() {
+  local cmd_array=("$@")
+  local parallel_outputs=()
+  local find_pids=()
+  for cmd in "${cmd_array[@]}"
+  do
+    local parallel_output
+    parallel_output="$(mktemp)"
+    parallel_outputs=("${parallel_outputs[@]}" "$parallel_output")
+    eval "$cmd" > "$parallel_output" &
+    find_pids=("${find_pids[@]}" "$!")
+  done
+  wait "${find_pids[@]}"
+  cat "${parallel_outputs[@]}"
+  rm -rf "${parallel_outputs[@]}"
+}
+
+windows_filelist() {
+  local wim_mountpoint="$1"
   local bad_dlls=(
     comctl32.dll
     comdlg32.dll
@@ -53,8 +77,6 @@ add_windows_files() {
     msimg32.dll
     msisip.dll
     mspatcha.dll
-    msvcrt.dll
-    msvcp_win.dll
     msvfw32.dll
     msxml3.dll
     newdev.dll
@@ -80,7 +102,6 @@ add_windows_files() {
     spoolss.dll
     srclient.dll
     sxs.dll
-    ucrtbase.dll
     urlmon.dll
     user32.dll
     userenv.dll
@@ -94,60 +115,117 @@ add_windows_files() {
     wintrust.dll
     ws2_32.dll
     wuapi.dll
+    rpcss.dll
+    kernel.appcore.dll
+    cryptbase.dll
+    dpapi.dll
+    srpapi.dll
+    tsappcmp.dll
+    msimsg.dll
+    msctf.dll
+    textshaping.dll
+    textinputframework.dll
+    msxml3r.dll
+    windows.storage.dll
+    windows.ui.composition.dll
+    windows.ui.dll
+    windows.dll
+    wintypes.dll
+    cryptsp.dll
+    coremessaging.dll
+    msasn1.dll
+    profapi.dll
+    psapi.dll
+    winnsi.dll
+    dwmapi.dll
+    ntmarta.dll
+    feclient.dll
+    srvcli.dll
+    netutils.dll
+    iertutil.dll
+    edputil.dll
+    cfgmgr32.dll
+    propsys.dll
 
     regsvr32.exe
     msiexec.exe
+    shutdown.exe
 
     wow*
+    msvcr*
+    ucrt*
+    msvcp*
+    vcruntime*
+
+    en-US
+    downlevel
+    wbem
   )
 
-  local FIND
-  local find_args
-  find_args="$(for file in "${common_files[@]}"; do printf " -o -iname '$file' "; done)"
-  find_args="${find_args/-o/}"
+  local sxs_globs=(
+{amd64,\
+x86,\
+wow64,\
+x86_wpf,\
+amd64_wpf,\
+msil}\
+*\
+{\
+ucrt,\
+common-controls,\
+isolationautomation,\
+i..utomation.proxystub,\
+systemcompatible,\
+presentationframework,\
+windowsbase,\
+comdlg32\
+}\
+*
+  )
 
-  FIND+=("find '$wim_mountpoint/Windows/SysWOW64' -maxdepth 1 $find_args")
-  FIND+=("find '$wim_mountpoint/Windows/System32' -maxdepth 1 $find_args")
+  mapfile -t find_cmds < \
+    <(find_files_cmd "$wim_mountpoint/Windows/SysWOW64" -maxdepth 1 "$(format_filenames_for_find "${bad_dlls[@]}")";
+      find_files_cmd "$wim_mountpoint/Windows/System32" -maxdepth 1 "$(format_filenames_for_find "${bad_dlls[@]}")")
+  parallel_get_filelist "${find_cmds[@]}" | sed 's/.*/&->postinstall_tree/'
 
-  find_args="$(for arch in amd64 x86 wow64
-               do
-                 for package in \
-                  ucrt \
-                  common-controls \
-                  isolationautomation \
-                  i..utomation.proxystub \
-                  systemcompatible
-                 do
-                   printf " -o -iname '${arch}_microsoft*$package*' -o -iname '${arch}_policy*$package*' "
-                 done
-               done)"
-  find_args="${find_args/-o/}"
-  FIND+=("find '$wim_mountpoint/Windows/WinSxS/' -maxdepth 2 -type d $find_args")
+  mapfile -t find_cmds < \
+    <(find_files_cmd "$wim_mountpoint/Windows/SysWOW64" -maxdepth 1 "$(format_filenames_for_find "${common_files[@]}")";
+      find_files_cmd "$wim_mountpoint/Windows/System32" -maxdepth 1 "$(format_filenames_for_find "${common_files[@]}")";
+      find_files_cmd "$wim_mountpoint/Windows/WinSxS" -maxdepth 2 -type d "$(format_filenames_for_find "${sxs_globs[@]}")";)
+  parallel_get_filelist "${find_cmds[@]}" | sed 's/.*/&->./'
 
-  mapfile -t files_to_install < \
-    <(local parallel_outputs=()
-      local find_pids=()
-      for find_cmd in "${FIND[@]}"
-      do
-        local parallel_output
-        parallel_output="$(mktemp)"
-        parallel_outputs=("${parallel_outputs[@]}" "$parallel_output")
-        eval "$find_cmd" > "$parallel_output" &
-        find_pids=("${find_pids[@]}" "$!")
-      done
-      wait "${find_pids[@]}"
-      cat "${parallel_outputs[@]}"
-      rm "${parallel_outputs[@]}")
+  cat <<EOF
+$wim_mountpoint/Windows/SystemResources->.
+$wim_mountpoint/Windows/Microsoft.NET->.
+$wim_mountpoint/Windows/assembly->.
+$wim_mountpoint/Windows/Fonts->.
+EOF
+}
 
+add_windows_files() {
+  local wim_mountpoint
+  wim_mountpoint="$(mktemp -d)"
+  local iso_mountpoint="$1"
+  local callback="${2:-:}"
+  local cp_pids=()
+  wimmount "$iso_mountpoint/sources/install.wim" 1 "$wim_mountpoint"
 
-  printf '%s\n' "${files_to_install[@]}" > /tmp/files
+  local filelist
+  filelist="$(mktemp)"
+  windows_filelist "$wim_mountpoint" > "$filelist"
+  mapfile -t copy_nodes < "$filelist"
+  rm "$filelist"
 
-  for fs_node in "${files_to_install[@]}"
+  regex='(.*)->(.*)'
+  for src_dest in "${copy_nodes[@]}"
   do
-    cp_tree "$wim_mountpoint" "$fs_node" . "$callback" &
-    cp_pids="$cp_pids $!"
+    [[ "$src_dest" =~ $regex ]]
+    local src="${BASH_REMATCH[1]}"
+    local dest="${BASH_REMATCH[2]}"
+    cp_tree "$wim_mountpoint" "$src" "$dest" "$callback" &
+    cp_pids+=($!)
   done
-  wait $cp_pids
+  wait "${cp_pids[@]}"
 
   umount "$wim_mountpoint"
   rmdir "$wim_mountpoint"

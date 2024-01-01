@@ -1,0 +1,3 @@
+[submodule "utils/qemu-automation"]
+	path = utils/qemu-automation
+	url = git@github.com:readysloth/qemu-automation.git
