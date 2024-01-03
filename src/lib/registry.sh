@@ -1,5 +1,23 @@
 . "$(dirname "$0")/lib/common.sh"
 
+append_to_system_path() {
+  local hive_file="$1"
+  local path="$2"
+
+  win_path="$(hivexget \
+              "$hive_file" \
+              'ControlSet001\Control\Session Manager\Environment' \
+              Path)"
+
+  hivexsh -w "$hive_file" << EOF
+cd ControlSet001\Control\Session Manager\Environment
+setval 1
+Path
+expandstring:$win_path;$path
+commit
+EOF
+}
+
 export_key() {
   local file="$1"
   local key="$2"

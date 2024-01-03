@@ -25,18 +25,28 @@ regsvr() {
   fi
 }
 
-download_packages &>/dev/null &
-add_windows_files "$ISO_MOUNTPOINT" regsvr & #&>/dev/null &
-change_registry "$DEFAULT_WIM" "$ISO_MOUNTPOINT" &
+download_packages 2>/dev/null &
+add_windows_files "$ISO_MOUNTPOINT" regsvr &>/dev/null &
+change_registry "$DEFAULT_WIM" "$ISO_MOUNTPOINT" &>/dev/null &
 
 wait $(jobs -p)
+
+pkgs_path=""
+for path in Applications Applications/*/
+do
+  win_path="${path/$PWD/}"
+  win_path="$(printf "%%SystemDrive%%\\%s" "${win_path//\//\\}")"
+  pkgs_path="$pkgs_path;$win_path"
+  pkgs_path="$pkgs_path;$win_path\\x32"
+  pkgs_path="$pkgs_path;$win_path\\x64"
+  pkgs_path="$pkgs_path;$win_path\\x86"
+done
+append_to_system_path Windows/System32/config/SYSTEM "$pkgs_path"
 
 mkdir -p postinstall_tree/Windows/System32
 cp Windows/System32/startnet.cmd postinstall_tree/Windows/System32/startnet.cmd
 
 cat >> ./Windows/System32/startnet.cmd << "EOF"
-set PATH=%SystemRoot%;%SystemRoot%\System32;%SystemRoot%\System32\Wbem;%SystemDrive%\Applications;%SystemDrive%\Applications\x64
-
 REM PENetwork.exe
 
 wpeutil SetKeyboardLayout 0409:00000409
