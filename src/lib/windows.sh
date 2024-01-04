@@ -146,6 +146,18 @@ windows_filelist() {
     edputil.dll
     cfgmgr32.dll
     propsys.dll
+    wsock32.dll
+
+    #dnsapi.dll
+    #devobj.dll
+    #devrtl.dll
+    #cscapi.dll
+    #spinf.dll
+    #netutils.dll
+    #newdev.dll
+    #mobilenetworking.dll
+    #joinutil.dll
+    #wofutil.dll
 
     regsvr32.exe
     msiexec.exe
@@ -156,10 +168,13 @@ windows_filelist() {
     ucrt*
     msvcp*
     vcruntime*
+    #wlan*
 
     en-US
     downlevel
     wbem
+    #driverstore
+    #drivers
   )
 
   local sxs_globs=(
@@ -200,6 +215,7 @@ $wim_mountpoint/Windows/Microsoft.NET->.
 $wim_mountpoint/Windows/assembly->.
 $wim_mountpoint/Windows/Fonts->.
 EOF
+#$wim_mountpoint/Windows/INF->.
 }
 
 add_windows_files() {

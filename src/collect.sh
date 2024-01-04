@@ -41,14 +41,14 @@ do
   pkgs_path="$pkgs_path;$win_path\\x64"
   pkgs_path="$pkgs_path;$win_path\\x86"
 done
-append_to_system_path Windows/System32/config/SYSTEM "$pkgs_path"
+echo "set PATH=$pkgs_path" >> Windows/System32/startnet.cmd
+
+#append_to_system_path Windows/System32/config/SYSTEM "%SystemDrive%\\Applications"
 
 mkdir -p postinstall_tree/Windows/System32
 cp Windows/System32/startnet.cmd postinstall_tree/Windows/System32/startnet.cmd
 
 cat >> ./Windows/System32/startnet.cmd << "EOF"
-REM PENetwork.exe
-
 wpeutil SetKeyboardLayout 0409:00000409
 wpeutil SetUserLocale en-US
 cls
@@ -65,11 +65,9 @@ do
   echo "xcopy X:\\postinstall_tree\\${target_path} Z:\\$target_path /e /y" >> ./Windows/System32/startnet.cmd
 done
 
-
 cat >> ./Windows/System32/startnet.cmd << "EOF"
 del /s /q Z:\postinstall_tree
 EOF
-
 
 cat >> diskpart.script << EOF
 select disk 0

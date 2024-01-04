@@ -85,6 +85,7 @@ export_multiple_and_merge() {
 change_registry() {
   local system="Windows/System32/config/SYSTEM"
   local software="Windows/System32/config/SOFTWARE"
+  local drivers="Windows/System32/config/DRIVERS"
 
   local wim_mountpoint="$(mktemp -d)"
   local wim_build_mountpoint="$(mktemp -d)"
@@ -108,7 +109,8 @@ change_registry() {
 
     HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Services\\msiserver
     HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Services\\TrustedInstaller
-    HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Services\\TrustedInstaller
+    #HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Control\\Network
+    #HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Enum
 
     # wine keys
 
@@ -3483,6 +3485,7 @@ EOF
 
   cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$system" .
   cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$software" .
+  #cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$drivers" .
 
   umount "$wim_mountpoint"
   umount "$wim_build_mountpoint"
