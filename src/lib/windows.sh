@@ -159,6 +159,11 @@ windows_filelist() {
     riched20.dll
     riched32.dll
     windowscodecs.dll
+    msheif.dll
+    mswebp.dll
+    msls31.dll
+    usp10.dll
+    policymanager.dll
 
     #dnsapi.dll
     #devobj.dll
