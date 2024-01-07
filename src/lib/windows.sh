@@ -147,6 +147,18 @@ windows_filelist() {
     cfgmgr32.dll
     propsys.dll
     wsock32.dll
+    msihnd.dll
+    pcacli.dll
+    tsappcmp.dll
+    apphelp.dll
+    pwrshsip.dll
+    pwrshplugin.dll
+    netapi32.dll
+    wshext.dll
+    winhttp.dll
+    riched20.dll
+    riched32.dll
+    windowscodecs.dll
 
     #dnsapi.dll
     #devobj.dll
@@ -162,6 +174,7 @@ windows_filelist() {
     regsvr32.exe
     msiexec.exe
     shutdown.exe
+    setx.exe
 
     wow*
     msvcr*
@@ -173,6 +186,7 @@ windows_filelist() {
     en-US
     downlevel
     wbem
+    windowspowershell
     #driverstore
     #drivers
   )
@@ -193,7 +207,8 @@ i..utomation.proxystub,\
 systemcompatible,\
 presentationframework,\
 windowsbase,\
-comdlg32\
+comdlg32,\
+msiprovider\
 }\
 *
   )
@@ -214,6 +229,7 @@ $wim_mountpoint/Windows/SystemResources->.
 $wim_mountpoint/Windows/Microsoft.NET->.
 $wim_mountpoint/Windows/assembly->.
 $wim_mountpoint/Windows/Fonts->.
+$wim_mountpoint/Windows/Installer->.
 EOF
 #$wim_mountpoint/Windows/INF->.
 }

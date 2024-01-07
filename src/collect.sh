@@ -41,12 +41,27 @@ do
   pkgs_path="$pkgs_path;$win_path\\x64"
   pkgs_path="$pkgs_path;$win_path\\x86"
 done
-echo "set PATH=$pkgs_path" >> Windows/System32/startnet.cmd
 
-#append_to_system_path Windows/System32/config/SYSTEM "%SystemDrive%\\Applications"
+cat >> Windows/System32/startnet.cmd << EOF
+set PSHOME=X:\Program Files\PowerShell\7
+set PSModulePath=X:\Program Files\PowerShell\7\Modules
+set ChocolateyInstall=X:\ProgramData\chocolatey
+set PATH_APPEND=$pkgs_path;%PSHOME%;%ChocolateyInstall%;%ChocolateyInstall%\bin
+set PATH=%PATH%;%PATH_APPEND%
+start PENetwork
+EOF
+
+#TODO: Modifcation of registry breaks .NET applications. Why?
+#create_env_val PATH_APPEND "$pkgs_path" Windows/System32/config/SYSTEM
 
 mkdir -p postinstall_tree/Windows/System32
 cp Windows/System32/startnet.cmd postinstall_tree/Windows/System32/startnet.cmd
+
+cat > postinstall_tree/first_boot_setup.cmd << EOF
+start /wait msiexec /i X:\Installers\PowerShell-7.4.0-win-x64.msi ALL_USERS=1 ADD_PATH=1 USE_MU=0 ENABLE_MU=0 /qn
+type chocolatey.cmd | pwsh
+move first_boot_setup.cmd first_boot_setup.cmd.done
+EOF
 
 cat >> ./Windows/System32/startnet.cmd << "EOF"
 wpeutil SetKeyboardLayout 0409:00000409
@@ -62,7 +77,7 @@ for entity in postinstall_tree/*
 do
   target_path=${entity/postinstall_tree\//}
   target_path=${target_path//\//\\}
-  echo "xcopy X:\\postinstall_tree\\${target_path} Z:\\$target_path /e /y" >> ./Windows/System32/startnet.cmd
+  echo "echo F | xcopy X:\\postinstall_tree\\${target_path} Z:\\$target_path /s /e /y" >> ./Windows/System32/startnet.cmd
 done
 
 cat >> ./Windows/System32/startnet.cmd << "EOF"
