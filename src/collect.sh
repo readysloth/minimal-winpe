@@ -60,6 +60,7 @@ cp Windows/System32/startnet.cmd postinstall_tree/Windows/System32/startnet.cmd
 cat > postinstall_tree/first_boot_setup.cmd << EOF
 start /wait msiexec /i X:\Installers\PowerShell-7.4.0-win-x64.msi ALL_USERS=1 ADD_PATH=1 USE_MU=0 ENABLE_MU=0 /qn
 type chocolatey.cmd | pwsh
+choco install dotnet-8.0-desktopruntime -y
 move first_boot_setup.cmd first_boot_setup.cmd.done
 EOF
 

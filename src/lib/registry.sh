@@ -108,8 +108,8 @@ change_registry() {
 
     HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Services\\msiserver
     HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Services\\TrustedInstaller
-    #HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Control\\Network
-    #HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Enum
+    HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Control\\Network
+    HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Enum
 
     #msi
 
@@ -3760,7 +3760,7 @@ EOF
 
   cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$system" .
   cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$software" .
-  #cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$drivers" .
+  cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$drivers" .
 
   umount "$wim_mountpoint"
   umount "$wim_build_mountpoint"

@@ -126,10 +126,6 @@ windows_filelist() {
     textshaping.dll
     textinputframework.dll
     msxml3r.dll
-    windows.storage.dll
-    windows.ui.composition.dll
-    windows.ui.dll
-    windows.dll
     wintypes.dll
     cryptsp.dll
     coremessaging.dll
@@ -164,17 +160,30 @@ windows_filelist() {
     msls31.dll
     usp10.dll
     policymanager.dll
+    scrrun.dll
+    uac.dll
+    atl.dll
+    atlthunk.dll
+    oleacc.dll
+    clbcatq.dll
+    secur32.dll
+    sspicli.dll
+    shutdownext.dll
+    shfolder.dll
+    wtsapi32.dll
+    powrprof.dll
+    iconcodecservice.dll
 
-    #dnsapi.dll
-    #devobj.dll
-    #devrtl.dll
-    #cscapi.dll
-    #spinf.dll
-    #netutils.dll
-    #newdev.dll
-    #mobilenetworking.dll
-    #joinutil.dll
-    #wofutil.dll
+    dnsapi.dll
+    devobj.dll
+    devrtl.dll
+    cscapi.dll
+    spinf.dll
+    netutils.dll
+    newdev.dll
+    mobilenetworking.dll
+    joinutil.dll
+    wofutil.dll
 
     regsvr32.exe
     msiexec.exe
@@ -186,14 +195,18 @@ windows_filelist() {
     ucrt*
     msvcp*
     vcruntime*
-    #wlan*
+    d3d*
+    dx*
+    wlan*
+    cert*
+    windows.*
 
     en-US
     downlevel
     wbem
     windowspowershell
-    #driverstore
-    #drivers
+    driverstore
+    drivers
   )
 
   local sxs_globs=(
