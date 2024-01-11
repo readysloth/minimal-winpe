@@ -47,8 +47,18 @@ shift $(($OPTIND-1))
 
 MOUNT_DIR="$(mktemp -d)"
 OUTPUT_ISO="${OUTPUT_ISO:-winpe.iso}"
+WIM="$(mktemp).wim"
 
 mount "$SOURCE_ISO" "$MOUNT_DIR"
-mkwinpeimg --iso --windows-dir="$MOUNT_DIR" "$OUTPUT_ISO"
-umount "$SOURCE_ISO"
+mkwinpeimg --only-wim --windows-dir="$MOUNT_DIR" "$WIM"
+cp "$WIM" /tmp/default.wim
+OVERLAY="$(./collect.sh "$MOUNT_DIR" "$WIM" | tail -n1)"
+
+mkwinpeimg --iso --windows-dir="$MOUNT_DIR" --overlay="$OVERLAY" "$OUTPUT_ISO"
+
+wait $(jobs -p)
+
+umount "$MOUNT_DIR"
 rmdir "$MOUNT_DIR"
+rm -rf "$OVERLAY"
+rm -f "$WIM"
