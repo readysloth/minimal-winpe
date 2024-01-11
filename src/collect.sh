@@ -64,6 +64,16 @@ choco install dotnet-8.0-desktopruntime -y
 move first_boot_setup.cmd first_boot_setup.cmd.done
 EOF
 
+cat > postinstall_tree/recommended_apps.cmd << EOF
+choco install git -y
+choco install vim -y
+choco install firefox -y
+choco install change-screen-resolution -y
+choco install open-shell -y
+choco install 7zip -y
+echo start changescreenresolution >> Windows/System32/startnet.cmd
+EOF
+
 cat >> ./Windows/System32/startnet.cmd << "EOF"
 wpeutil SetKeyboardLayout 0409:00000409
 wpeutil SetUserLocale en-US
