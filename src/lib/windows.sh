@@ -84,7 +84,6 @@ windows_filelist() {
     ntdll.dll
     odbccp32.dll
     ole32.dll
-    oleaut32.dll
     opengl32.dll
     propsys.dll
     qcap.dll
@@ -164,7 +163,6 @@ windows_filelist() {
     uac.dll
     atl.dll
     atlthunk.dll
-    oleacc.dll
     clbcatq.dll
     secur32.dll
     sspicli.dll
@@ -173,6 +171,15 @@ windows_filelist() {
     wtsapi32.dll
     powrprof.dll
     iconcodecservice.dll
+    dwrite.dll
+    wkscli.dll
+    netmsg.dll
+    imageres.dll
+    tzres.dll
+    dinput.dll
+    ddraw.dll
+    winmm.dll
+    dciman32.dll
 
     dnsapi.dll
     devobj.dll
@@ -197,8 +204,10 @@ windows_filelist() {
     vcruntime*
     d3d*
     dx*
+    ole*
     wlan*
     cert*
+    msvbvm*
     windows.*
 
     en-US
@@ -248,8 +257,8 @@ $wim_mountpoint/Windows/Microsoft.NET->.
 $wim_mountpoint/Windows/assembly->.
 $wim_mountpoint/Windows/Fonts->.
 $wim_mountpoint/Windows/Installer->.
+$wim_mountpoint/Windows/INF->.
 EOF
-#$wim_mountpoint/Windows/INF->.
 }
 
 add_windows_files() {
