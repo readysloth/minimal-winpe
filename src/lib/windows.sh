@@ -181,6 +181,7 @@ windows_filelist() {
     winmm.dll
     dciman32.dll
 
+    drvstore.dll
     dnsapi.dll
     devobj.dll
     devrtl.dll
@@ -191,11 +192,25 @@ windows_filelist() {
     mobilenetworking.dll
     joinutil.dll
     wofutil.dll
+    samcli.dll
+    fltlib.dll
+    mscms.dll
+    mswsock.dll
+    glu32.dll
+    ntdsapi.dll
+    browseui.dll
+    logoncli.dll
+    umpdc.dll
+    prnfldr.dll
+    pdh.dll
 
     regsvr32.exe
     msiexec.exe
     shutdown.exe
-    setx.exe
+    where.exe
+    cmd.exe
+
+    winspool.drv
 
     wow*
     msvcr*
@@ -209,6 +224,8 @@ windows_filelist() {
     cert*
     msvbvm*
     windows.*
+    twinapi*
+    xml*
 
     en-US
     downlevel
@@ -235,7 +252,8 @@ systemcompatible,\
 presentationframework,\
 windowsbase,\
 comdlg32,\
-msiprovider\
+msiprovider,\
+powershell\
 }\
 *
   )

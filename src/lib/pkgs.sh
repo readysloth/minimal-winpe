@@ -1,7 +1,7 @@
 download() {
   local directory="$1"
   shift
-  wget -q -o /dev/null --directory-prefix="$directory" "$@"
+  wget -q -o /dev/null --content-disposition --directory-prefix="$directory" "$@"
 }
 
 install_to() {
@@ -28,6 +28,33 @@ download_packages() {
   download Installers https://github.com/PowerShell/PowerShell/releases/download/v7.4.0/PowerShell-7.4.0-win-x64.msi
   download_pids+=($!)
 
+  download Installers https://sourceforge.net/projects/maxlauncher/files/MaxLauncher/1.31.0.0/maxlauncher_1.31.0.0_setup.exe/download
+  download_pids+=($!)
+
+  (download temp https://github.com/lucasg/Dependencies/releases/download/v1.11.1/Dependencies_x64_Release.zip &&
+   install_to Dependencies unzip -qq -o "$(readlink -f temp/Dependencies_x64_Release.zip)") &
+  download_pids+=($!)
+
+  (download temp https://www.penetworkmanager.de/scripts/PENetwork_x64.7z &&
+   7z x -so temp/PENetwork_x64.7z PENetwork.exe > Applications/PENetwork.exe) &
+  download_pids+=($!)
+
+
+  cat > chocolatey.ps1 << "EOF"
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+EOF
+
+  cat > scoop.ps1 << "EOF"
+iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
+EOF
+
+  if [ -n "$NO_PORTABLE_APPS" ]
+  then
+    wait "${download_pids[@]}"
+    rm -rf temp
+    return
+  fi
+
   (download temp https://download.sysinternals.com/files/SysinternalsSuite.zip &&
    install_to SysInternals unzip -qq -o "$(readlink -f temp/SysinternalsSuite.zip)") &
   download_pids+=($!)
@@ -48,14 +75,6 @@ download_packages() {
    bash -c "cd Applications && unzip -qq -o '$(readlink -f temp/nircmd.zip)' && rm NirCmd.chm") &
   download_pids+=($!)
 
-  (download temp https://www.penetworkmanager.de/scripts/PENetwork_x64.7z &&
-   7z x -so temp/PENetwork_x64.7z PENetwork.exe > Applications/PENetwork.exe) &
-  download_pids+=($!)
-
-  (download temp https://github.com/lucasg/Dependencies/releases/download/v1.11.1/Dependencies_x64_Release.zip &&
-   install_to Dependencies unzip -qq -o "$(readlink -f temp/Dependencies_x64_Release.zip)") &
-  download_pids+=($!)
-
   (download temp https://github.com/dnSpyEx/dnSpy/releases/download/v6.4.1/dnSpy-net-win64.zip &&
    install_to dnSpy unzip -qq -o "$(readlink -f temp/dnSpy-net-win64.zip)") &
   download_pids+=($!)
@@ -71,10 +90,6 @@ download_packages() {
   (download temp https://www.rapidee.com/download/RapidEEx64.zip &&
    install_to RapidEE unzip -qq -o "$(readlink -f temp/RapidEEx64.zip)") &
   download_pids+=($!)
-
-  cat > chocolatey.cmd <<EOF
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-EOF
 
   wait "${download_pids[@]}"
   rm -rf temp

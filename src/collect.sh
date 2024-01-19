@@ -52,7 +52,8 @@ move %SystemDrive%\regsvr32.cmd %SystemDrive%\regsvr32.cmd.done
 set PSHOME=%SystemDrive%\Program Files\PowerShell\7
 set PSModulePath=%SystemDrive%\Program Files\PowerShell\7\Modules
 set ChocolateyInstall=%SystemDrive%\ProgramData\chocolatey
-set PATH_APPEND=$pkgs_path;%PSHOME%;%ChocolateyInstall%;%ChocolateyInstall%\bin
+set ScoopBins=%USERPROFILE%\scoop\shims;%ProgramData%\scoop\shims
+set PATH_APPEND=$pkgs_path;%PSHOME%;%ChocolateyInstall%;%ChocolateyInstall%\bin;%ScoopBins%
 set PATH=%PATH%;%PATH_APPEND%
 start PENetwork
 EOF
@@ -65,7 +66,7 @@ wpeutil SetKeyboardLayout 0409:00000409
 wpeutil SetUserLocale en-US
 cls
 
-diskpart /s X:\diskpart.script
+diskpart /s %SystemDrive%\diskpart.script
 dism /Apply-Image /ImageFile:"D:\sources\boot.wim" /Index:1 /ApplyDir:Z:\
 BCDboot Z:\Windows /s Z: /f ALL
 EOF
@@ -77,26 +78,67 @@ cat >> diskpart.script << EOF
 select disk 0
 clean
 create partition primary size=16000
-format quick fs=fat32 label="Windows PE"
+format quick fs=ntfs label="Windows PE"
 assign letter=Z
 active
 EOF
 
 cat > postinstall_tree/first_boot_setup.cmd << EOF
 start /wait msiexec /i %SystemDrive%\Installers\PowerShell-7.4.0-win-x64.msi ALL_USERS=1 ADD_PATH=1 USE_MU=0 ENABLE_MU=0 /qn
-type chocolatey.cmd | pwsh
-choco install dotnet-8.0-desktopruntime -y
+start /wait %SystemDrive%\Installers\maxlauncher_1.31.0.0_setup.exe /VERYSILENT /NORESTART /DIR=%SystemDrive%\Applications
+type chocolatey.ps1 | pwsh
+type scoop.ps1 | pwsh
+
+mklink /D %WINDIR%\SysWOW64\config\systemprofile %USERPROFILE%
+
+call scoop install -g main/git
+call scoop update
+call scoop bucket add main
+call scoop bucket add extras
+call scoop bucket add versions
+
+call scoop install -g extras/windowsdesktop-runtime
+call scoop install -g extras/vcredist2022
+call scoop install -g versions/dotnet-nightly
 move first_boot_setup.cmd first_boot_setup.cmd.done
 EOF
 
 cat > postinstall_tree/recommended_apps.cmd << EOF
-choco install git -y
-choco install vim -y
-choco install firefox -y
+call scoop bucket add nirsoft
+call scoop bucket add nonportable
+
+call scoop install -g main/7zip
+call scoop install -g main/neovim
+call scoop install -g main/coreutils
+call scoop install -g main/gdisk
+call scoop install -g main/curl
+call scoop install -g extras/firefox
+call scoop install -g extras/explorerplusplus
+call scoop install -g extras/networkmanager
+call scoop install -g extras/processhacker
+call scoop install -g extras/sysinternals
+call scoop install -g extras/doublecmd
+call scoop install -g extras/conemu
+call scoop install -g extras/driverstoreexplorer
+call scoop install -g extras/wingetui
+call scoop install -g extras/librehardwaremonitor
+call scoop install -g nonportable/open-shell-np
+
 choco install change-screen-resolution -y
-choco install open-shell -y
-choco install 7zip -y
 echo start changescreenresolution >> Windows/System32/startnet.cmd
+EOF
+
+
+cat > postinstall_tree/poweruser_apps.cmd << EOF
+call scoop install -g extras/komorebi
+call scoop install -g extras/smartsystemmenu
+EOF
+
+cat > postinstall_tree/winpe_maint.cmd << EOF
+call scoop install -g nirsoft/runtimeclassesview
+call scoop install -g nirsoft/regdllview
+call scoop install -g nirsoft/appcrashview
+call scoop install -g nirsoft/serviwin
 EOF
 
 for entity in postinstall_tree/*
