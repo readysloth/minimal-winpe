@@ -41,171 +41,163 @@ windows_filelist() {
     aclui.dll
     advapi32.dll
     advpack.dll
+    apphelp.dll
+    atl.dll
     atl100.dll
+    atlthunk.dll
     avicap32.dll
     bcrypt.dll
+    browseui.dll
     cabinet.dll
+    cfgmgr32.dll
+    clbcatq.dll
+    cldapi.dll
     combase.dll
     compstui.dll
+    coremessaging.dll
     crypt32.dll
+    cryptbase.dll
     cryptdlg.dll
     cryptnet.dll
+    cryptsp.dll
     cryptui.dll
+    cscapi.dll
     dbghelp.dll
+    dciman32.dll
+    ddraw.dll
     devenum.dll
+    devobj.dll
+    devrtl.dll
+    dinput.dll
     dnsapi.dll
+    dpapi.dll
+    drvstore.dll
     dsound.dll
+    dwmapi.dll
+    dwrite.dll
     dxgi.dll
+    edputil.dll
+    efswrt.dll
     explorerframe.dll
+    feclient.dll
+    fltlib.dll
     gdi32.dll
     gdi32full.dll
+    glu32.dll
+    iconcodecservice.dll
     ieframe.dll
+    iertutil.dll
     imagehlp.dll
+    imageres.dll
     imm32.dll
     iphlpapi.dll
+    joinutil.dll
+    kernel.appcore.dll
     kernel32.dll
     kernelbase.dll
     localspl.dll
+    logoncli.dll
     mfplat.dll
+    mobilenetworking.dll
     mp3dmod.dll
     mpr.dll
     msacm32.dll
+    msasn1.dll
+    mscms.dll
     mscoree.dll
+    mscories.dll
+    msctf.dll
     msdmo.dll
+    msheif.dll
     mshtml.dll
     msi.dll
+    msihnd.dll
     msimg32.dll
+    msimsg.dll
     msisip.dll
+    msls31.dll
     mspatcha.dll
     msvfw32.dll
+    mswebp.dll
+    mswsock.dll
     msxml3.dll
+    msxml3r.dll
+    netapi32.dll
+    netmsg.dll
+    netutils.dll
     newdev.dll
     nsi.dll
     ntdll.dll
+    ntdsapi.dll
+    ntmarta.dll
     odbccp32.dll
     ole32.dll
     opengl32.dll
+    pcacli.dll
+    pdh.dll
+    policymanager.dll
+    powrprof.dll
+    prnfldr.dll
+    profapi.dll
     propsys.dll
+    psapi.dll
+    pwrshplugin.dll
+    pwrshsip.dll
     qcap.dll
     qedit.dll
     quartz.dll
+    riched20.dll
+    riched32.dll
     rpcrt4.dll
+    rpcss.dll
     rsaenh.dll
     rtworkq.dll
+    samcli.dll
+    scrrun.dll
     sechost.dll
+    secur32.dll
     setupapi.dll
     sfc_os.dll
     shcore.dll
     shell32.dll
+    shfolder.dll
     shlwapi.dll
+    shutdownext.dll
+    spinf.dll
     spoolss.dll
     srclient.dll
+    srpapi.dll
+    srvcli.dll
+    sspicli.dll
     sxs.dll
+    textinputframework.dll
+    textshaping.dll
+    tsappcmp.dll
+    tzres.dll
+    uac.dll
+    umpdc.dll
     urlmon.dll
     user32.dll
     userenv.dll
+    usp10.dll
     uxtheme.dll
     version.dll
     wevtsvc.dll
     win32u.dll
     windowscodecs.dll
+    winhttp.dll
     wininet.dll
     winmm.dll
-    wintrust.dll
-    ws2_32.dll
-    wuapi.dll
-    rpcss.dll
-    kernel.appcore.dll
-    cryptbase.dll
-    dpapi.dll
-    srpapi.dll
-    tsappcmp.dll
-    msimsg.dll
-    msctf.dll
-    textshaping.dll
-    textinputframework.dll
-    msxml3r.dll
-    wintypes.dll
-    cryptsp.dll
-    coremessaging.dll
-    msasn1.dll
-    profapi.dll
-    psapi.dll
     winnsi.dll
-    dwmapi.dll
-    ntmarta.dll
-    feclient.dll
-    srvcli.dll
-    netutils.dll
-    iertutil.dll
-    edputil.dll
-    cfgmgr32.dll
-    propsys.dll
-    wsock32.dll
-    msihnd.dll
-    pcacli.dll
-    tsappcmp.dll
-    apphelp.dll
-    pwrshsip.dll
-    pwrshplugin.dll
-    netapi32.dll
-    wshext.dll
-    winhttp.dll
-    riched20.dll
-    riched32.dll
-    windowscodecs.dll
-    msheif.dll
-    mswebp.dll
-    msls31.dll
-    usp10.dll
-    policymanager.dll
-    scrrun.dll
-    uac.dll
-    atl.dll
-    atlthunk.dll
-    clbcatq.dll
-    secur32.dll
-    sspicli.dll
-    shutdownext.dll
-    shfolder.dll
-    wtsapi32.dll
-    powrprof.dll
-    iconcodecservice.dll
-    dwrite.dll
+    wintrust.dll
+    wintypes.dll
     wkscli.dll
-    netmsg.dll
-    imageres.dll
-    tzres.dll
-    dinput.dll
-    ddraw.dll
-    winmm.dll
-    dciman32.dll
-
-    drvstore.dll
-    dnsapi.dll
-    devobj.dll
-    devrtl.dll
-    cscapi.dll
-    spinf.dll
-    netutils.dll
-    newdev.dll
-    mobilenetworking.dll
-    joinutil.dll
     wofutil.dll
-    samcli.dll
-    fltlib.dll
-    mscms.dll
-    mswsock.dll
-    glu32.dll
-    ntdsapi.dll
-    browseui.dll
-    logoncli.dll
-    umpdc.dll
-    prnfldr.dll
-    pdh.dll
-    cldapi.dll
-    efswrt.dll
-    mscories.dll
+    ws2_32.dll
+    wshext.dll
+    wsock32.dll
+    wtsapi32.dll
+    wuapi.dll
 
     regsvr32.exe
     msiexec.exe
