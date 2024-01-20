@@ -203,12 +203,16 @@ windows_filelist() {
     umpdc.dll
     prnfldr.dll
     pdh.dll
+    cldapi.dll
+    efswrt.dll
+    mscories.dll
 
     regsvr32.exe
     msiexec.exe
     shutdown.exe
     where.exe
     cmd.exe
+    timeout.exe
 
     winspool.drv
 

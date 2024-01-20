@@ -1,16 +1,30 @@
 . "$(dirname "$0")/lib/common.sh"
 
-create_env_val() {
+get_env_val() {
   local name="$1"
-  local value="$2"
+  local iso_mountpoint="$2"
   local hive_file="$3"
 
-  hivexsh -w "$hive_file" << EOF
-cd ControlSet001\Control\Session Manager\Environment
-setval 1
-$name
-expandstring:$value
-commit
+  local wim_mountpoint="$(mktemp -d)"
+  wimmount "$iso_mountpoint/sources/install.wim" 1 "$wim_mountpoint"
+
+  hivexget \
+          "$wim_mountpoint/$hive_file" \
+          'ControlSet001\Control\Session Manager\Environment' \
+          "$name"
+
+  umount "$wim_mountpoint"
+  rmdir "$wim_mountpoint"
+}
+
+create_env_val() {
+  local name="$1"
+  shift
+  local value="$*"
+  value="${value//%/%%}"
+
+  cat << EOF
+echo y | reg add "HKEY_LOCAL_MACHINE\MOUNT\ControlSet001\Control\Session Manager\Environment" /v "$name" /t REG_EXPAND_SZ /d "$value"
 EOF
 }
 
@@ -84,12 +98,9 @@ change_registry() {
   local drivers="Windows/System32/config/DRIVERS"
 
   local wim_mountpoint="$(mktemp -d)"
-  local wim_build_mountpoint="$(mktemp -d)"
 
-  local default_wim="$1"
-  local iso_mountpoint="$2"
+  local iso_mountpoint="$1"
   wimmount "$iso_mountpoint/sources/install.wim" 1 "$wim_mountpoint"
-  wimmountrw "$default_wim" "$wim_build_mountpoint"
 
   local registry_paths=(
     HKEY_LOCAL_MACHINE\\Software\\WOW6432Node
@@ -3724,46 +3735,22 @@ change_registry() {
   mapfile -t system_branches < <(printf '%s\n' "${registry_paths[@]}" | sed -n 's@HKEY_LOCAL_MACHINE\\System\\@@p')
   mapfile -t software_branches < <(printf '%s\n' "${registry_paths[@]}" | sed -n 's@HKEY_LOCAL_MACHINE\\Software\\@@p')
 
-  export_multiple_and_merge \
-    'HKEY_LOCAL_MACHINE\Software' \
+  export_multiple_parallel \
     "$wim_mountpoint/$software" \
-    "$wim_build_mountpoint/$software" \
-    "${software_branches[@]}" \
+    "${software_branches[@]}" | \
+    sed 's@\[\\@[HKEY_LOCAL_MACHINE\\MOUNT\\@' > software.reg \
     &
   local merge_pids="$merge_pids $!"
 
-  export_multiple_and_merge \
-    'HKEY_LOCAL_MACHINE\System' \
+  export_multiple_parallel \
     "$wim_mountpoint/$system" \
-    "$wim_build_mountpoint/$system" \
-    "${system_branches[@]}" \
+    "${system_branches[@]}" | \
+    sed 's@\[\\@[HKEY_LOCAL_MACHINE\\MOUNT\\@' > system.reg \
     &
   merge_pids="$merge_pids $!"
 
   wait $merge_pids
 
-  merge_registry \
-    "$wim_build_mountpoint/$system" \
-    'HKEY_LOCAL_MACHINE\System' << EOF
-[\ControlSet001\Control\CrashControl]
-"AutoReboot"=dword:00000000
-"CrashDumpEnabled"=dword:00000001
-"DumpFile"=hex(2):43,00,3a,00,5c,00,6d,00,65,00,6d,00,6f,00,72,00,79,00,2e,00,64,00,6d,00,70,00,00,00
-"DumpFilters"=hex(7):64,00,75,00,6d,00,70,00,66,00,76,00,65,00,2e,00,73,00,79,00,73,00,00,00,00,00
-"DumpLogLevel"=dword:00000000
-"EnableLogFile"=dword:00000001
-"LogEvent"=dword:00000001
-"MinidumpDir"=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,00,6f,00,74,00,25,00,5c,00,4d,00,69,00,6e,00,69,00,64,00,75,00,6d,00,70,00,00,00
-"MinidumpsCount"=dword:00000005
-"Overwrite"=dword:00000001
-EOF
-
-  cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$system" .
-  cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$software" .
-  cp_tree "$wim_build_mountpoint" "$wim_build_mountpoint/$drivers" .
-
   umount "$wim_mountpoint"
-  umount "$wim_build_mountpoint"
   rmdir "$wim_mountpoint"
-  rmdir "$wim_build_mountpoint"
 }

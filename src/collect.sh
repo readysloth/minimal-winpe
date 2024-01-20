@@ -27,7 +27,7 @@ regsvr() {
 
 download_packages 2>/dev/null &
 add_windows_files "$ISO_MOUNTPOINT" regsvr &>/dev/null &
-change_registry "$DEFAULT_WIM" "$ISO_MOUNTPOINT" &>/dev/null &
+change_registry "$ISO_MOUNTPOINT" &>/dev/null &
 
 wait $(jobs -p)
 
@@ -42,24 +42,26 @@ do
   pkgs_path="$pkgs_path;$win_path\\x86"
 done
 
+win_path="$(get_env_val Path "$ISO_MOUNTPOINT" Windows/System32/config/SYSTEM)"
+
+{
+create_env_val PSHOME '%SystemDrive%\Program Files\PowerShell\7'
+create_env_val PSModulePath '%SystemDrive%\Program Files\PowerShell\7\Modules'
+create_env_val ChocolateyInstall '%SystemDrive%\ProgramData\chocolatey'
+create_env_val SCOOP "%SystemDrive%\ProgramData\scoop"
+create_env_val SCOOP_GLOBAL "%SystemDrive%\ProgramData\scoop"
+create_env_val PATH_APPEND "$pkgs_path;%PSHOME%;%ChocolateyInstall%;%ChocolateyInstall%\bin;%SCOOP_GLOBAL%\shims"
+create_env_val Path "$win_path;%PATH_APPEND%"
+} > win_environment_reg.cmd
+
+
 mkdir -p postinstall_tree/Windows/System32
 mv Windows/System32/startnet.cmd postinstall_tree/regsvr32.cmd
 
 cat >> postinstall_tree/Windows/System32/startnet.cmd << EOF
 call %SystemDrive%\regsvr32.cmd
 move %SystemDrive%\regsvr32.cmd %SystemDrive%\regsvr32.cmd.done
-
-set PSHOME=%SystemDrive%\Program Files\PowerShell\7
-set PSModulePath=%SystemDrive%\Program Files\PowerShell\7\Modules
-set ChocolateyInstall=%SystemDrive%\ProgramData\chocolatey
-set ScoopBins=%USERPROFILE%\scoop\shims;%ProgramData%\scoop\shims
-set PATH_APPEND=$pkgs_path;%PSHOME%;%ChocolateyInstall%;%ChocolateyInstall%\bin;%ScoopBins%
-set PATH=%PATH%;%PATH_APPEND%
-start PENetwork
 EOF
-
-#TODO: Modifcation of registry breaks .NET applications. Why?
-#create_env_val PATH_APPEND "$pkgs_path" Windows/System32/config/SYSTEM
 
 cat >> ./Windows/System32/startnet.cmd << "EOF"
 wpeutil SetKeyboardLayout 0409:00000409
@@ -69,9 +71,16 @@ cls
 diskpart /s %SystemDrive%\diskpart.script
 dism /Apply-Image /ImageFile:"D:\sources\boot.wim" /Index:1 /ApplyDir:Z:\
 BCDboot Z:\Windows /s Z: /f ALL
-EOF
-cat >> ./Windows/System32/startnet.cmd << "EOF"
 del /s /q Z:\postinstall_tree
+
+reg load HKEY_LOCAL_MACHINE\MOUNT Z:\Windows\System32\config\SYSTEM
+reg import %SystemDrive%\system.reg
+call %SystemDrive%\win_environment_reg.cmd
+reg unload HKEY_LOCAL_MACHINE\MOUNT
+
+reg load HKEY_LOCAL_MACHINE\MOUNT Z:\Windows\System32\config\SOFTWARE
+reg import %SystemDrive%\software.reg
+reg unload HKEY_LOCAL_MACHINE\MOUNT
 EOF
 
 cat >> diskpart.script << EOF
@@ -84,6 +93,10 @@ active
 EOF
 
 cat > postinstall_tree/first_boot_setup.cmd << EOF
+start PENetwork.exe
+timeout 5 > NUL
+echo start PENetwork >> %SystemDrive%\Windows\System32\startnet.cmd
+
 start /wait msiexec /i %SystemDrive%\Installers\PowerShell-7.4.0-win-x64.msi ALL_USERS=1 ADD_PATH=1 USE_MU=0 ENABLE_MU=0 /qn
 start /wait %SystemDrive%\Installers\maxlauncher_1.31.0.0_setup.exe /VERYSILENT /NORESTART /DIR=%SystemDrive%\Applications
 type chocolatey.ps1 | pwsh
@@ -139,6 +152,13 @@ call scoop install -g nirsoft/runtimeclassesview
 call scoop install -g nirsoft/regdllview
 call scoop install -g nirsoft/appcrashview
 call scoop install -g nirsoft/serviwin
+EOF
+
+cat > postinstall_tree/full_first_boot.cmd << EOF
+call %SystemDrive%\first_boot_setup.cmd
+call %SystemDrive%\recommended_apps.cmd
+call %SystemDrive%\poweruser_apps.cmd
+call %SystemDrive%\winpe_maint.cmd
 EOF
 
 for entity in postinstall_tree/*
