@@ -28,7 +28,7 @@ download_packages() {
   download Installers https://github.com/PowerShell/PowerShell/releases/download/v7.4.0/PowerShell-7.4.0-win-x64.msi
   download_pids+=($!)
 
-  download Installers https://sourceforge.net/projects/maxlauncher/files/MaxLauncher/1.31.0.0/maxlauncher_1.31.0.0_setup.exe/download
+  download Applications 'https://www.lerup.com/php/download.php?LaunchBar/LaunchBar_x64.exe'
   download_pids+=($!)
 
   (download temp https://github.com/lucasg/Dependencies/releases/download/v1.11.1/Dependencies_x64_Release.zip &&
@@ -39,6 +39,9 @@ download_packages() {
    7z x -so temp/PENetwork_x64.7z PENetwork.exe > Applications/PENetwork.exe) &
   download_pids+=($!)
 
+  (download temp 'http://cs.gettysburg.edu/~duncjo01/archive/patterns/windows/Windows%2095&98/ImageHandler-3.jpg'
+   mv "$(readlink -f temp/ImageHandler-3.jpg)" postinstall_tree/Windows/System32/winpe.jpg) &
+  download_pids+=($!)
 
   cat > chocolatey.ps1 << "EOF"
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
@@ -93,4 +96,75 @@ EOF
 
   wait "${download_pids[@]}"
   rm -rf temp
+}
+
+create_first_boot_scripts() {
+  cat > first_boot_setup.cmd << EOF
+start PENetwork.exe
+call %SystemDrive%\regsvr32.cmd
+echo start PENetwork >> %SystemDrive%\Windows\System32\startnet.cmd
+
+start /wait msiexec /i %SystemDrive%\Installers\PowerShell-7.4.0-win-x64.msi ALL_USERS=1 ADD_PATH=1 USE_MU=0 ENABLE_MU=0 /qn
+type chocolatey.ps1 | pwsh
+type scoop.ps1 | pwsh
+
+mklink /D %WINDIR%\SysWOW64\config\systemprofile %USERPROFILE%
+
+call scoop install -g main/git
+call scoop update
+call scoop bucket add main
+call scoop bucket add extras
+call scoop bucket add versions
+
+call scoop install -g extras/windowsdesktop-runtime
+call scoop install -g extras/vcredist2022
+call scoop install -g versions/dotnet-nightly
+move first_boot_setup.cmd first_boot_setup.cmd.done
+EOF
+
+  cat > recommended_apps.cmd << EOF
+call scoop bucket add nirsoft
+call scoop bucket add nonportable
+
+call scoop install -g main/7zip
+call scoop install -g main/neovim
+call scoop install -g main/coreutils
+call scoop install -g main/gdisk
+call scoop install -g main/curl
+call scoop install -g extras/firefox
+call scoop install -g extras/explorerplusplus
+call scoop install -g extras/networkmanager
+call scoop install -g extras/processhacker
+call scoop install -g extras/sysinternals
+call scoop install -g extras/doublecmd
+call scoop install -g extras/conemu
+call scoop install -g extras/driverstoreexplorer
+call scoop install -g extras/wingetui
+call scoop install -g extras/librehardwaremonitor
+call scoop install -g nonportable/open-shell-np
+
+choco install change-screen-resolution -y
+echo start changescreenresolution >> Windows/System32/startnet.cmd
+EOF
+
+
+  cat > poweruser_apps.cmd << EOF
+call scoop install -g extras/komorebi
+call scoop install -g extras/smartsystemmenu
+EOF
+
+  cat > winpe_maint.cmd << EOF
+call scoop install -g nirsoft/runtimeclassesview
+call scoop install -g nirsoft/regdllview
+call scoop install -g nirsoft/appcrashview
+call scoop install -g nirsoft/serviwin
+EOF
+
+  cat > full_first_boot.cmd << EOF
+call %SystemDrive%\first_boot_setup.cmd
+call %SystemDrive%\recommended_apps.cmd
+call %SystemDrive%\poweruser_apps.cmd
+call %SystemDrive%\winpe_maint.cmd
+EOF
+
 }

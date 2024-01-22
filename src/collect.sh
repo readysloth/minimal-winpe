@@ -21,9 +21,11 @@ regsvr() {
 
   if [[ "$resulting_file" == *System32/*dll ]]
   then
-    echo "%SystemRoot%\\System32\\regsvr32.exe /S \"%SystemRoot%\\System32\\$filename\"" >> ./Windows/System32/startnet.cmd
+    echo "%SystemRoot%\\System32\\regsvr32.exe /S \"%SystemRoot%\\System32\\$filename\"" >> postinstall_tree/regsvr32.cmd
   fi
 }
+
+mkdir -p postinstall_tree/Windows/System32
 
 download_packages 2>/dev/null &
 add_windows_files "$ISO_MOUNTPOINT" regsvr &>/dev/null &
@@ -55,19 +57,18 @@ create_env_val Path "$win_path;%PATH_APPEND%"
 } > win_environment_reg.cmd
 
 
-mkdir -p postinstall_tree/Windows/System32
-mv Windows/System32/startnet.cmd postinstall_tree/regsvr32.cmd
+cat >> ./postinstall_tree/init.cmd << "EOF"
+start %SystemDrive%\Applications\PENetwork.exe
+start %SystemDrive%\ProgramData\chocolatey\bin\ChangeScreenResolution.exe
+EOF
 
-cat >> postinstall_tree/Windows/System32/startnet.cmd << EOF
-call %SystemDrive%\regsvr32.cmd
-move %SystemDrive%\regsvr32.cmd %SystemDrive%\regsvr32.cmd.done
+cat >> ./postinstall_tree/Windows/System32/winpeshl.ini << "EOF"
+[LaunchApps]
+%SystemDrive%\init.cmd
+%SystemDrive%\Applications\LaunchBar_x64.exe, LARGE=1 POSITION=4 %USERPROFILE%\AppData\Roaming\Microsoft\Internet Explorer\Quick Launch
 EOF
 
 cat >> ./Windows/System32/startnet.cmd << "EOF"
-wpeutil SetKeyboardLayout 0409:00000409
-wpeutil SetUserLocale en-US
-cls
-
 diskpart /s %SystemDrive%\diskpart.script
 dism /Apply-Image /ImageFile:"D:\sources\boot.wim" /Index:1 /ApplyDir:Z:\
 BCDboot Z:\Windows /s Z: /f ALL
@@ -81,6 +82,9 @@ reg unload HKEY_LOCAL_MACHINE\MOUNT
 reg load HKEY_LOCAL_MACHINE\MOUNT Z:\Windows\System32\config\SOFTWARE
 reg import %SystemDrive%\software.reg
 reg unload HKEY_LOCAL_MACHINE\MOUNT
+
+mkdir "Z:\Windows\System32\config\systemprofile\AppData\Roaming\Microsoft\Internet Explorer\Quick Launch"
+del Z:\Windows\System32\startnet.cmd
 EOF
 
 cat >> diskpart.script << EOF
@@ -92,74 +96,9 @@ assign letter=Z
 active
 EOF
 
-cat > postinstall_tree/first_boot_setup.cmd << EOF
-start PENetwork.exe
-timeout 5 > NUL
-echo start PENetwork >> %SystemDrive%\Windows\System32\startnet.cmd
-
-start /wait msiexec /i %SystemDrive%\Installers\PowerShell-7.4.0-win-x64.msi ALL_USERS=1 ADD_PATH=1 USE_MU=0 ENABLE_MU=0 /qn
-start /wait %SystemDrive%\Installers\maxlauncher_1.31.0.0_setup.exe /VERYSILENT /NORESTART /DIR=%SystemDrive%\Applications
-type chocolatey.ps1 | pwsh
-type scoop.ps1 | pwsh
-
-mklink /D %WINDIR%\SysWOW64\config\systemprofile %USERPROFILE%
-
-call scoop install -g main/git
-call scoop update
-call scoop bucket add main
-call scoop bucket add extras
-call scoop bucket add versions
-
-call scoop install -g extras/windowsdesktop-runtime
-call scoop install -g extras/vcredist2022
-call scoop install -g versions/dotnet-nightly
-move first_boot_setup.cmd first_boot_setup.cmd.done
-EOF
-
-cat > postinstall_tree/recommended_apps.cmd << EOF
-call scoop bucket add nirsoft
-call scoop bucket add nonportable
-
-call scoop install -g main/7zip
-call scoop install -g main/neovim
-call scoop install -g main/coreutils
-call scoop install -g main/gdisk
-call scoop install -g main/curl
-call scoop install -g extras/firefox
-call scoop install -g extras/explorerplusplus
-call scoop install -g extras/networkmanager
-call scoop install -g extras/processhacker
-call scoop install -g extras/sysinternals
-call scoop install -g extras/doublecmd
-call scoop install -g extras/conemu
-call scoop install -g extras/driverstoreexplorer
-call scoop install -g extras/wingetui
-call scoop install -g extras/librehardwaremonitor
-call scoop install -g nonportable/open-shell-np
-
-choco install change-screen-resolution -y
-echo start changescreenresolution >> Windows/System32/startnet.cmd
-EOF
-
-
-cat > postinstall_tree/poweruser_apps.cmd << EOF
-call scoop install -g extras/komorebi
-call scoop install -g extras/smartsystemmenu
-EOF
-
-cat > postinstall_tree/winpe_maint.cmd << EOF
-call scoop install -g nirsoft/runtimeclassesview
-call scoop install -g nirsoft/regdllview
-call scoop install -g nirsoft/appcrashview
-call scoop install -g nirsoft/serviwin
-EOF
-
-cat > postinstall_tree/full_first_boot.cmd << EOF
-call %SystemDrive%\first_boot_setup.cmd
-call %SystemDrive%\recommended_apps.cmd
-call %SystemDrive%\poweruser_apps.cmd
-call %SystemDrive%\winpe_maint.cmd
-EOF
+pushd postinstall_tree
+  create_first_boot_scripts
+popd
 
 for entity in postinstall_tree/*
 do
@@ -167,5 +106,5 @@ do
   target_path=${target_path//\//\\}
   echo "echo F | xcopy X:\\postinstall_tree\\${target_path} Z:\\$target_path /s /e /y" >> ./Windows/System32/startnet.cmd
 done
-
+cp -r postinstall_tree /tmp/
 echo "$DOWNLOAD_DIR"
