@@ -58,8 +58,8 @@ create_env_val Path "$win_path;%PATH_APPEND%"
 
 
 cat >> ./postinstall_tree/init.cmd << "EOF"
-start %SystemDrive%\Applications\PENetwork.exe
 start %SystemDrive%\ProgramData\chocolatey\bin\ChangeScreenResolution.exe
+start %SystemDrive%\Applications\PENetwork.exe
 EOF
 
 cat >> ./postinstall_tree/Windows/System32/winpeshl.ini << "EOF"

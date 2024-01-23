@@ -100,9 +100,7 @@ EOF
 
 create_first_boot_scripts() {
   cat > first_boot_setup.cmd << EOF
-start PENetwork.exe
 call %SystemDrive%\regsvr32.cmd
-echo start PENetwork >> %SystemDrive%\Windows\System32\startnet.cmd
 
 start /wait msiexec /i %SystemDrive%\Installers\PowerShell-7.4.0-win-x64.msi ALL_USERS=1 ADD_PATH=1 USE_MU=0 ENABLE_MU=0 /qn
 type chocolatey.ps1 | pwsh
@@ -119,7 +117,6 @@ call scoop bucket add versions
 call scoop install -g extras/windowsdesktop-runtime
 call scoop install -g extras/vcredist2022
 call scoop install -g versions/dotnet-nightly
-move first_boot_setup.cmd first_boot_setup.cmd.done
 EOF
 
   cat > recommended_apps.cmd << EOF
