@@ -52,7 +52,7 @@ MOUNT_DIR="$(mktemp -d)"
 OUTPUT_ISO="${OUTPUT_ISO:-winpe.iso}"
 
 mount "$SOURCE_ISO" "$MOUNT_DIR"
-OVERLAY="$(./collect.sh "$MOUNT_DIR" | tail -n1)"
+OVERLAY="$("$(dirname "$0")/collect.sh" "$MOUNT_DIR" | tail -n1)"
 
 mkwinpeimg --iso --windows-dir="$MOUNT_DIR" --overlay="$OVERLAY" "$OUTPUT_ISO"
 
