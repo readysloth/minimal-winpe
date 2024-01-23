@@ -17,6 +17,7 @@ function usage ()
     -v Display script version
     -s Windows installation iso (REQUIRED)
     -o Resulting WinPE iso
+    -p do not include portable apps (are downloaded in build time)
     "
 
 }    # ----------  end of function usage  ----------
@@ -27,7 +28,7 @@ function usage ()
 
 [ $# -lt 2 ] && usage && exit 1
 
-while getopts "hvs:o" opt
+while getopts "hvs:op" opt
 do
   case $opt in
 
@@ -38,6 +39,8 @@ do
   s) SOURCE_ISO="$OPTARG";;
 
   o) OUTPUT_ISO="$OPTARG";;
+
+  p) export NO_PORTABLE_APPS="true";;
 
   *) usage; exit 1 ;;
 
