@@ -35,6 +35,7 @@ windows_filelist() {
     comctl32.dll
     comdlg32.dll
     gdiplus.dll
+    wldap32.dll
   )
 
   local common_files=(
@@ -68,7 +69,6 @@ windows_filelist() {
     devenum.dll
     devobj.dll
     devrtl.dll
-    dinput.dll
     dnsapi.dll
     dpapi.dll
     drvstore.dll
@@ -117,7 +117,6 @@ windows_filelist() {
     msisip.dll
     msls31.dll
     mspatcha.dll
-    msvfw32.dll
     mswebp.dll
     mswsock.dll
     msxml3.dll
@@ -198,6 +197,84 @@ windows_filelist() {
     wsock32.dll
     wtsapi32.dll
     wuapi.dll
+    resampledmo.dll
+    acledit.dll
+    activeds.dll
+    actxprxy.dll
+    adsldp.dll
+    adsldpc.dll
+    amsi.dll
+    amstream.dll
+    apisetschema.dll
+    appxdeploymentclient.dll
+    atmlib.dll
+    authz.dll
+    avifil32.dll
+    avifile.dll
+    avrt.dll
+    bluetoothapis.dll
+    cards.dll
+    cdosys.dll
+    clusapi.dll
+    comcat.dll
+    commdlg.dll
+    compobj.dll
+    comsvcs.dll
+    concrt140.dll
+    connect.dll
+    credui.dll
+    crtdll.dll
+    cryptdll.dll
+    cryptext.dll
+    cryptowinrt.dll
+    ctapi32.dll
+    d2d1.dll
+    davclnt.dll
+    dbgeng.dll
+    dcomp.dll
+    ddrawex.dll
+    dhcpcsvc.dll
+    dhcpcsvc6.dll
+    difxapi.dll
+    directmanipulation.dll
+    dispdib.dll
+    dispex.dll
+    dmband.dll
+    dmcompos.dll
+    dmime.dll
+    dmloader.dll
+    dmscript.dll
+    dmstyle.dll
+    dmsynth.dll
+    dmusic.dll
+    dmusic32.dll
+    dplay.dll
+    dplayx.dll
+    dpnaddr.dll
+    dpnet.dll
+    dpnhpast.dll
+    dpnhupnp.dll
+    dpnlobby.dll
+    dpvoice.dll
+    dpwsockx.dll
+    dsdmo.dll
+    dsquery.dll
+    dssenh.dll
+    dsuiext.dll
+    dswave.dll
+    esent.dll
+    evr.dll
+    faultrep.dll
+    hid.dll
+    jsproxy.dll
+    kerberos.dll
+    mfreadwrite.dll
+    mmdevapi.dll
+    normaliz.dll
+    url.dll
+    fwpuclnt.dll
+    wbemcomn.dll
+    winmmbase.dll
 
     regsvr32.exe
     msiexec.exe
@@ -209,19 +286,21 @@ windows_filelist() {
     winspool.drv
 
     wow*
-    msvcr*
     ucrt*
-    msvcp*
+    msv*
     vcruntime*
     d3d*
     dx*
     ole*
     wlan*
     cert*
-    msvbvm*
     windows.*
     twinapi*
     xml*
+    input*
+    dinput*
+    ondemand*
+    rasa*
 
     en-US
     downlevel
