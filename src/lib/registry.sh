@@ -111,6 +111,8 @@ change_registry() {
     HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\ NT\\CurrentVersion\\Image\ File\ Execution\ Options
     HKEY_LOCAL_MACHINE\\Software\\Microsoft\\.NETFramework
     HKEY_LOCAL_MACHINE\\Software\\Microsoft\\PowerShell
+    HKEY_LOCAL_MACHINE\\Software\\Microsoft\\DirectX
+    HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Dism
 
     HKEY_LOCAL_MACHINE\\Software\\Classes\\.msi
     HKEY_LOCAL_MACHINE\\Software\\Classes\\.msp
@@ -122,7 +124,24 @@ change_registry() {
     HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Control\\Network
     HKEY_LOCAL_MACHINE\\System\\ControlSet001\\Enum
 
-    #msi
+    # driver store explorer
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\CLSID\\\{9CB5172B-D600-46BA-AB77-77BB7E3A00D9\}
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\CLSID\\\{22C21F93-7DDB-411C-9B17-C5B7BD064ABC\}
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\CLSID\\\{01B90D9A-8209-47F7-9C52-E1244BF50CED\}
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\CLSID\\\{00020420-0000-0000-C000-000000000046\}
+
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\Wow6432Node\\CLSID\\\{9CB5172B-D600-46BA-AB77-77BB7E3A00D9\}
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\Wow6432Node\\CLSID\\\{22C21F93-7DDB-411C-9B17-C5B7BD064ABC\}
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\Wow6432Node\\CLSID\\\{01B90D9A-8209-47F7-9C52-E1244BF50CED\}
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\Wow6432Node\\CLSID\\\{00020420-0000-0000-C000-000000000046\}
+
+    # qemu-ga
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\CLSID\\\{F618C514-DFB8-11D1-A2CF-00805FC79235\}
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\CLSID\\\{182C40F0-32E4-11D0-818B-00A0C9231C29\}
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\Wow6432Node\\CLSID\\\{F618C514-DFB8-11D1-A2CF-00805FC79235\}
+    HKEY_LOCAL_MACHINE\\Software\\Classes\\Wow6432Node\\CLSID\\\{182C40F0-32E4-11D0-818B-00A0C9231C29\}
+
+    # msi
 
     HKEY_LOCAL_MACHINE\\Software\\Classes\\AppID\\\{000C101C-0000-0000-C000-000000000046\}
     HKEY_LOCAL_MACHINE\\Software\\Classes\\CLSID\\\{000C101C-0000-0000-C000-000000000046\}

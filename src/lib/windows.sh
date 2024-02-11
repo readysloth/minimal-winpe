@@ -184,6 +184,7 @@ windows_filelist() {
     wevtsvc.dll
     win32u.dll
     windowscodecs.dll
+    windowscodecsext.dll
     winhttp.dll
     wininet.dll
     winmm.dll
@@ -275,6 +276,7 @@ windows_filelist() {
     fwpuclnt.dll
     wbemcomn.dll
     winmmbase.dll
+    mstask.dll
 
     regsvr32.exe
     msiexec.exe
@@ -282,6 +284,7 @@ windows_filelist() {
     where.exe
     cmd.exe
     timeout.exe
+    netsh.exe
 
     winspool.drv
 
@@ -301,6 +304,11 @@ windows_filelist() {
     dinput*
     ondemand*
     rasa*
+    xinput*
+    dism*
+    task*
+    mfc*
+    catsrv*
 
     en-US
     downlevel
@@ -308,6 +316,8 @@ windows_filelist() {
     windowspowershell
     driverstore
     drivers
+    dism
+    com
   )
 
   local sxs_globs=(
