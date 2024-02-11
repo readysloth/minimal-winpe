@@ -117,15 +117,18 @@ call scoop bucket add versions
 call scoop install -g extras/windowsdesktop-runtime
 call scoop install -g extras/vcredist2022
 call scoop install -g versions/dotnet-nightly
+choco install -y visualbasic6-kb896559
 EOF
 
   cat > recommended_apps.cmd << EOF
-call scoop bucket add nirsoft
+call scoop bucket add games
 call scoop bucket add nonportable
 
 call scoop install -g main/7zip
 call scoop install -g main/neovim
 call scoop install -g main/coreutils
+call scoop install -g main/gawk
+call scoop install -g main/grep
 call scoop install -g main/gdisk
 call scoop install -g main/curl
 call scoop install -g extras/firefox
@@ -138,8 +141,12 @@ call scoop install -g extras/conemu
 call scoop install -g extras/driverstoreexplorer
 call scoop install -g extras/wingetui
 call scoop install -g extras/librehardwaremonitor
+call scoop install -g extras/flameshot
+call scoop install -g extras/ffmpeg
+call scoop install -g games/dxwrapper
 call scoop install -g nonportable/open-shell-np
 
+choco install directx -y
 choco install change-screen-resolution -y
 echo start changescreenresolution >> Windows/System32/startnet.cmd
 EOF
@@ -151,10 +158,14 @@ call scoop install -g extras/smartsystemmenu
 EOF
 
   cat > winpe_maint.cmd << EOF
+call scoop bucket add nirsoft
+
 call scoop install -g nirsoft/runtimeclassesview
 call scoop install -g nirsoft/regdllview
 call scoop install -g nirsoft/appcrashview
 call scoop install -g nirsoft/serviwin
+call scoop install -g nirsoft/winupdateslist
+call scoop install -g extras/dismplusplus
 EOF
 
   cat > full_first_boot.cmd << EOF
