@@ -277,6 +277,8 @@ windows_filelist() {
     wbemcomn.dll
     winmmbase.dll
     mstask.dll
+    shellstyle.dll
+    appresolver.dll
 
     regsvr32.exe
     msiexec.exe
@@ -285,6 +287,7 @@ windows_filelist() {
     cmd.exe
     timeout.exe
     netsh.exe
+    openwith.exe
 
     winspool.drv
 
@@ -309,6 +312,7 @@ windows_filelist() {
     task*
     mfc*
     catsrv*
+    *.ocx
 
     en-US
     downlevel
