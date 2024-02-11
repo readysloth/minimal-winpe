@@ -90,7 +90,7 @@ EOF
 cat >> diskpart.script << EOF
 select disk 0
 clean
-create partition primary size=16000
+create partition primary
 format quick fs=ntfs label="Windows PE"
 assign letter=Z
 active
