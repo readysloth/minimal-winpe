@@ -144,7 +144,6 @@ call scoop install -g extras/librehardwaremonitor
 call scoop install -g extras/flameshot
 call scoop install -g extras/ffmpeg
 call scoop install -g games/dxwrapper
-call scoop install -g nonportable/open-shell-np
 
 choco install directx -y
 choco install change-screen-resolution -y
@@ -155,6 +154,7 @@ EOF
   cat > poweruser_apps.cmd << EOF
 call scoop install -g extras/komorebi
 call scoop install -g extras/smartsystemmenu
+call scoop install -g extras/weebp
 EOF
 
   cat > winpe_maint.cmd << EOF
