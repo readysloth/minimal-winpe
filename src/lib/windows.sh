@@ -279,6 +279,7 @@ windows_filelist() {
     mstask.dll
     shellstyle.dll
     appresolver.dll
+    framedynos.dll
 
     regsvr32.exe
     msiexec.exe
@@ -312,6 +313,7 @@ windows_filelist() {
     task*
     mfc*
     catsrv*
+    netprof*
     *.ocx
 
     en-US
