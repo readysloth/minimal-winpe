@@ -280,6 +280,7 @@ windows_filelist() {
     shellstyle.dll
     appresolver.dll
     framedynos.dll
+    msiso.dll
 
     regsvr32.exe
     msiexec.exe
